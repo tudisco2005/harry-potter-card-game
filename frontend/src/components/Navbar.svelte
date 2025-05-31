@@ -32,7 +32,14 @@
             <DarkMode />
         </div>
         {#if !logged} 
-            <Button size="sm" href="/login">Get started</Button>
+            <Button size="sm" href="/login">
+                <div class="inline-flex items-center justify-center text-base text-center ">
+                    <p>Entra</p>
+                    <svg class="w-4 h-4 ml-2"  xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H8m12 0-4 4m4-4-4-4M9 4H7a3 3 0 0 0-3 3v10a3 3 0 0 0 3 3h2"/>
+                    </svg>               
+                </div> 
+            </Button>
         {:else}
             <div class="flex items-center md:order-2">
                 <Avatar id="avatar-menu" src="profile-picture-3.webp" />

@@ -8,13 +8,16 @@
 	let { children } = $props();
 </script>
 
-<div>
-	{#key $page.url.pathname}
-		<Navbar currentPath={$page.url.pathname} logged={false}></Navbar>
-	{/key}
-	<div class="dark:bg-gray-700">
-		{@render children()}
-		<Footer></Footer>
-	</div>
+<div class="flex flex-col min-h-screen">
+    {#key $page.url.pathname}
+        <Navbar currentPath={$page.url.pathname} logged={false}></Navbar>
+    {/key}
+
+    <div class="dark:bg-gray-900 flex flex-col flex-grow">
+        <main class="flex-grow flex items-center justify-center pt-2">
+            {@render children()}
+        </main>
+        <Footer></Footer>
+    </div>
 </div>
 
