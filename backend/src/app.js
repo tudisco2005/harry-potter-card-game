@@ -1,11 +1,17 @@
 import express from "express";
 import cors from "cors";
+import { initRoutes } from "./routes.js";
 
-const app = express();              // Create an Express application
+const app = express();
 
 // Middleware configuration
-app.use(express.json());            // Parse incoming JSON requests
-app.use(express.urlencoded({ extended: false }));  // Parse URL-encoded data
-app.use(cors());                    // Enable CORS for cross-origin requests
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
+app.use(cors());
 
-export default app;                // Export the configured app
+export const initApp = (mongodb) => {
+    app.use("/api", initRoutes(mongodb));
+    return app;
+};
+
+export default app;

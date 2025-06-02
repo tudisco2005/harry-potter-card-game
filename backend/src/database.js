@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-async function connectDB(protocol, host, username, password, dbName, collectionName, options) {
+async function connectDB(protocol, host, username, password, dbName, collectionNames, options) {
     // Check if the host and dbName are provided
     if (!host || !dbName) {
         throw new Error("Host and database name must be provided");
@@ -8,7 +8,7 @@ async function connectDB(protocol, host, username, password, dbName, collectionN
 
     // Construct the MongoDB connection URL
     // mongodb://username:password@host:port/database
-    const url = `${protocol}://${username}:${password}@${host}/${options === "" ? dbName : options}`;
+    const url = `${protocol}://${username}:${password}@${host}/${dbName}${options}`;
     console.log(`[+] Connessione a MongoDB in corso: ${url}`);
 
     try {
@@ -31,18 +31,17 @@ async function connectDB(protocol, host, username, password, dbName, collectionN
         }
 
         // Verifica se una specifica collezione esiste 
-        const collections = await db.listCollections({ name: collectionName }).toArray();
-        const collectionExists = collections.length > 0;
+        await collectionNames.forEach(async element => {
+            const collections = await db.listCollections({ name: element }).toArray();
+            const collectionExists = collections.length > 0;
 
-        if (collectionExists) {
-            console.log(`[+] Collezione '${collectionName}' trovata`);
-        } else {
-            console.log(`[!] Collezione '${collectionName}' non trovata, verrà creata automaticamente`);
-            
-            // Crea la collezione se non esiste
-            await db.createCollection(collectionName);
-            console.log(`[+] Collezione '${collectionName}' creata`);
-        }
+            if (collectionExists) {
+                console.log(`[+] Collezione '${element}' trovata`);
+            } else {
+                console.log(`[!] Collezione '${element}' non trovata, verrà creata automaticamente, all'inserimento del primo oggetto`);
+            }
+        }); 
+        
 
         return mongodb;
     } catch (error) {

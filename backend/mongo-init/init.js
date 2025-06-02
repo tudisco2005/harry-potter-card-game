@@ -13,7 +13,4 @@ db.createUser({
   ]
 });
 
-// crea la collezione 'users'
-db.createCollection('users');
-
 print(`Database inizializzato con successo: ${process.env.MONGO_APP_NOROOT_USERNAME}, ${process.env.MONGO_APP_NOROOT_PASSWORD}`);
