@@ -15,7 +15,7 @@ const mongodb = await connectDB(
     process.env.MONGO_CONNECTION_OPTIONS
 ); // Connect to MongoDB using the provided environment variables
 
-const app = initApp(mongodb); // Initialize the Express app with the MongoDB connection
+const app = await initApp(mongodb); // Initialize the Express app with the MongoDB connection
 const server = http.createServer(app); // Create an HTTP server using the Express app
 const PORT = process.env.SERVER_PORT || 3000;
 
