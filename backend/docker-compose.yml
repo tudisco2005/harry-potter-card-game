@@ -6,11 +6,13 @@ services:
     volumes:
       - mongodb-data:/data/db/
       - mongodb-log:/var/log/mongodb/
+      - ./mongo-init:/docker-entrypoint-initdb.d/  # Script di inizializzazione
     env_file:
       - .env
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_INITDB_ROOT_USERNAME}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_INITDB_ROOT_PASSWORD}
+      MONGO_INITDB_DATABASE: ${MONGO_INITDB_DATABASE}
     ports:
       - "27017:27017"
     networks:
@@ -28,7 +30,7 @@ services:
       ME_CONFIG_BASICAUTH_USERNAME: ${MONGO_EXPRESS_USERNAME}
       ME_CONFIG_BASICAUTH_PASSWORD: ${MONGO_EXPRESS_PASSWORD}
     ports:
-      - 8081:8081
+      - "8081:8081"
     networks:
       - mongodb_network
     depends_on:
