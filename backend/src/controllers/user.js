@@ -84,6 +84,8 @@ export const loginUserController = (mongodb) => {
     return async function loginUser(req, res) {
         const { username, password } = req.body;
 
+        console.log("[-] Login in corso:", { username, password });
+
         // Validate input
         if (!username || !password) {
             console.log("[-] Login fallito: Campi mancanti nella registrazione");

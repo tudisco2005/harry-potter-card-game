@@ -4,18 +4,14 @@
     import Navbar from "../components/Navbar.svelte";
     import Footer from '../components/Footer.svelte';
     import { page } from '$app/stores';
-    import { PUBLIC_API_SERVER_URL } from '$env/static/public';
 
-    let { children } = $props();
-    let logged = true
+    let { children, data } = $props();
 
-    // check if user is logged in using a request with token in the header
-    // if return valid: true set logged to true
 </script>
 
 <div class="flex flex-col min-h-screen">
-    {#key $page.url.pathname}
-        <Navbar currentPath={$page.url.pathname} logged={logged}></Navbar>
+    {#key $page.url.pathname || data.user.isAuthenticated}
+        <Navbar currentPath={$page.url.pathname} logged={data.user.isAuthenticated}></Navbar>
     {/key}
 
     <div class="dark:bg-gray-900 flex flex-col flex-grow">

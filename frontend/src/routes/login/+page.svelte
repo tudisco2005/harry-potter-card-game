@@ -1,6 +1,6 @@
 <script>
-    import { PUBLIC_API_SERVER_URL } from '$env/static/public';
-    
+    import { goto, invalidateAll } from '$app/navigation';
+
     let username_email = "";
     let password = "";
     let error = "";
@@ -16,7 +16,7 @@
         error = "";
         
         try {
-            const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/login`, {
+            const response = await fetch(`/api/login`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -28,16 +28,13 @@
             });
 
             if (response.ok) {
-                const data = await response.json();
                 success = true;
-                
-                // Set token in the store
-                token.set(data.token);
+                await invalidateAll();
 
                 // Redirect to collection page after success
-                // setTimeout(() => {
-                //     goto('/collection');
-                // }, 1200);
+                setTimeout(() => {
+                    goto('/collection');
+                }, 500);
             } else {
                 const data = await response.json();
                 error = data.message || "Errore durante l'accesso";
