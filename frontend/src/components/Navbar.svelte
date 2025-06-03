@@ -1,4 +1,5 @@
 <script>
+    import { goto } from '$app/navigation';
     import { Navbar, NavBrand, NavLi, NavUl, NavHamburger, Button, Avatar, Dropdown, DropdownHeader, DropdownItem, DropdownDivider } from 'flowbite-svelte';
     import { DarkMode } from 'flowbite-svelte';
     
@@ -6,6 +7,8 @@
     
     // TODO: replace with actual authentication state
     export let logged; // Simulate logged in state 
+    export let username = ""; // Simulate username
+    export let email = ""
 
     // currentPath is now received as a prop from the parent component
     let navItems = [
@@ -42,18 +45,19 @@
                 </div> 
             </Button>
         {:else}
-            <div class="flex items-center md:order-2">
-                <Avatar id="avatar-menu" src="profile-picture-3.webp" />
+            <div class="flex items-center md:order-2 border-2 rounded-full border-gray-800 hover:border-gray-400">
+                <Avatar id="avatar-menu" src="user.jpg" />
             </div>
             <Dropdown placement="bottom" triggeredBy="#avatar-menu">
             <DropdownHeader>
-                <span class="block text-sm">Bonnie Green</span>
-                <span class="block truncate text-sm font-medium">name@flowbite.com</span>
+                <span class="block text-sm text-center">{username}</span>
+                <span class="block truncate text-sm font-medium">{email}</span>
             </DropdownHeader>
-            <DropdownItem>Profilo</DropdownItem>
-            <DropdownItem>Impostazioni</DropdownItem>
+            <DropdownItem on:click={() => {goto("/profile")}}>Profilo</DropdownItem>
+            <DropdownItem on:click={() => {goto("/payment")}}>Pagamento</DropdownItem>
+
             <DropdownDivider />
-            <DropdownItem>Sign out</DropdownItem>
+            <DropdownItem class="text-red-600" on:click={() => {goto("/logout")}}>Esci</DropdownItem>
             </Dropdown>
         {/if}
         <NavHamburger />

@@ -41,11 +41,11 @@ export const verifyToken = (token) => {
 };
 
 export const authenticateUser = async (req, res, next) => {
-    const token = req.headers.authorization.split(" ")[1]
-    if (!token) {
-        return res.status(401).send({ message: "Accesso negato. Nessun token fornito." });
+    if(!req.headers.authorization || !req.headers.authorization.startsWith("Bearer ")) {
+      return res.status(401).send({ message: "Accesso negato. Token non fornito." });
     }
 
+    const token = req.headers.authorization.split(" ")[1]
     const decoded = verifyToken(token);
     if (!decoded) {
         return res.status(401).send({ message: "Token non valido." });
@@ -65,6 +65,7 @@ export const authenticateUser = async (req, res, next) => {
       return res.status(500).send({ message: "Errore interno del server." });
     }
 
-    req.user = decoded;
+    req.userId = decoded.id;
+    req.token = token;
     next();
 };

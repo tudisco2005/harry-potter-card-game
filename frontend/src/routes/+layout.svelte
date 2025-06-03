@@ -11,7 +11,13 @@
 
 <div class="flex flex-col min-h-screen">
     {#key $page.url.pathname || data.user.isAuthenticated}
-        <Navbar currentPath={$page.url.pathname} logged={data.user.isAuthenticated}></Navbar>
+        <Navbar 
+            currentPath={$page.url.pathname} 
+            logged={data.user.isAuthenticated}
+            username={data.user.username}
+            email={data.user.email}
+        >
+        </Navbar>
     {/key}
 
     <div class="dark:bg-gray-900 flex flex-col flex-grow">

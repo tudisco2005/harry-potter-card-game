@@ -38,6 +38,7 @@
             if (response.ok) {
                 // Redirect to login page on success after 1.2 seconds
                 success = true;
+                error = ""
                 setTimeout(() => {
                     window.location.href = '/login';
                 }, 1200);
