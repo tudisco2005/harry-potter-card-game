@@ -41,7 +41,7 @@ export const verifyToken = (token) => {
 };
 
 export const authenticateUser = async (req, res, next) => {
-    const token = req.cookies.tokenJWT;
+    const token = req.headers.authorization.split(" ")[1]
     if (!token) {
         return res.status(401).send({ message: "Accesso negato. Nessun token fornito." });
     }
@@ -57,9 +57,6 @@ export const authenticateUser = async (req, res, next) => {
       if (result) {
           // Token trovato nella blacklist
           console.log("[-] Token trovato nella blacklist:", token);
-
-          // clear the cookie
-          res.clearCookie("tokenJWT");
 
           return res.status(401).send({ message: "Token non valido." });
       }

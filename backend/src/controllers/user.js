@@ -1,7 +1,7 @@
-import {hashPassword, verifyPassword} from '../crypto.js';
+import {hashPassword, verifyPassword} from '../auth/crypto.js';
 import userModel from '../models/user.js';
 import blacklistSchema from './blacklist.js';
-import { generateToken } from '../auth/auth.js';
+import { generateToken,verifyToken } from '../auth/auth.js';
 
 
 export const createUserController = (mongodb) => {
@@ -13,6 +13,12 @@ export const createUserController = (mongodb) => {
         if(!username || !email || !favouriteWizard || !password || !confirmPassword) {
             console.log("[-] Registrazione fallita: Campi mancanti nella registrazione");
             return res.status(400).send({ message: "Non sono presenti tutti i campi" });
+        }
+
+        // check if username contains @
+        if (username.includes("@")) {
+            console.log("[-] Registrazione fallita: Il nome utente non può contenere '@'");
+            return res.status(400).send({ message: "Il nome utente non può contenere '@'" });
         }
 
         // - check password rules(min 8, 1 uppercase, 1 lowercase, 1 number)
@@ -111,17 +117,16 @@ export const loginUserController = (mongodb) => {
 
             // Generate JWT token
             const token = generateToken(user);
-            res.cookie("tokenJWT", token, {
-                //httpOnly: true,
-                //secure: process.env.NODE_ENV === "production", // Use secure cookies in production
-                //sameSite: "Strict" // Prevent CSRF attacks
-            });
+            if (!token) {
+                console.error("[-] Errore durante la generazione del token JWT");
+                return res.status(500).send({ message: "Errore durante il login" });
+            }
 
             // Log successful login
             console.log("[+] Login effettuato con successo:", { username });
 
             // Send success response
-            res.status(200).send({ message: "Login effettuato con successo" });
+            res.status(200).send({ message: "Login effettuato con successo", token });
         } catch (error) {
             console.error("[-] Errore durante il login:", error);
             res.status(500).send({ message: "Errore durante il login" });
@@ -132,15 +137,14 @@ export const loginUserController = (mongodb) => {
 export const logoutUserController = (mongodb) => {
     return async function logoutUser(req, res) {
         try {
-            console.log(req.cookies)
             // Check if the user is authenticated
-            if (!req.cookies.tokenJWT) {
+            if (!req.headers.authorization || !req.headers.authorization.split(" ")[1]) {
                 console.log("[-] Logout fallito: Nessun token presente");
                 return res.status(401).send({ message: "Non sei autenticato" });
             }
 
             // put jwt token in blacklist
-            const token = req.cookies.tokenJWT;
+            const token = req.headers.authorization.split(" ")[1];
             const decoded = await blacklistSchema.create({ tokenId: token });
             if (!decoded) {
                 console.error("[-] Errore durante la creazione della blacklist:", error);
@@ -148,9 +152,6 @@ export const logoutUserController = (mongodb) => {
             }
             // Log the token blacklisting
             console.log("[+] Token JWT messo in blacklist:", token);
-
-            // Clear the JWT cookie
-            res.clearCookie("tokenJWT");
 
             // Log successful logout
             console.log("[+] Logout effettuato con successo");
@@ -163,3 +164,41 @@ export const logoutUserController = (mongodb) => {
         }
     }
 };
+
+export const tokenStatusUserController = (mongodb) => {
+    return async function tokenStatus(req, res) {
+        try {
+            // Check if the user is authenticated
+            if (!req.headers.authorization || !req.headers.authorization.split(" ")[1]) {
+                console.log("[-] Logout fallito: Nessun token presente");
+                return res.status(401).send({ message: "Non sei autenticato" });
+            }
+
+            // Verify the token
+            const token = req.headers.authorization.split(" ")[1];
+            const decoded = await blacklistSchema.findOne({ tokenId: token }).catch((error) => {
+                console.error("[-] Errore durante la verifica del token:", error);
+                return res.status(500).send({ valid: false });
+            });
+
+            if (decoded) {
+                console.log("[-] Token presente nella blacklist");
+                return res.status(401).send({ valid: false });
+            }
+
+            // verify jwt
+            const isValid = verifyToken(token);
+            if (!isValid) {
+                console.log("[-] Token non valido");
+                return res.status(401).send({ valid: false });
+            }
+
+            // If the token is valid, send success response
+            console.log("[+] Controllo token espicito valido");
+            res.status(200).send({ valid: true });
+        } catch (error) {
+            console.error("[-] Errore durante la verifica del token:", error);
+            res.status(500).send({ message: "Errore durante la verifica del token" });
+        }
+    }
+}
