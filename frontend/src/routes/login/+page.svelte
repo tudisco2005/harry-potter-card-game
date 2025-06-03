@@ -33,8 +33,8 @@
 
                 // Redirect to collection page after success
                 setTimeout(() => {
-                    goto('/collection');
-                }, 500);
+                    goto('/album');
+                }, 300);
             } else {
                 const data = await response.json();
                 error = data.message || "Errore durante l'accesso";

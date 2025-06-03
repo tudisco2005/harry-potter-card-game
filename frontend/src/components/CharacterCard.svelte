@@ -88,7 +88,7 @@
   $: isAlive = alive;
 </script>
 
-<div class="relative w-80 h-[500px] mx-auto" style="perspective: 1000px;">
+<div class="relative w-80 h-[460px] mx-auto" style="perspective: 1000px;">
   <!-- Container della carta con flip -->
   <button 
     class="relative w-full h-full transition-all duration-700 cursor-pointer card-flip-container"
@@ -99,20 +99,6 @@
     <!-- LATO FRONTALE -->
     <div class="absolute inset-0 w-full h-full card-face card-front rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-amber-900 via-amber-800 to-amber-900 border-4 {houseColors.border}" style="box-shadow: 0 25px 50px rgba(0,0,0,0.4), 0 0 30px rgba(212, 175, 55, 0.3);">
       
-      <!-- Gemma di rarità -->
-      <!-- <div class="absolute -top-2 -left-2 w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-red-800 font-bold text-lg shadow-lg z-10 animate-pulse">
-        ★
-      </div> -->
-
-      <!-- Particelle magiche animate -->
-      <div class="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {#each Array(4) as _, i}
-          <div 
-            class="absolute w-1 h-1 bg-yellow-400 rounded-full opacity-0 animate-bounce"
-            style="left: {20 + i * 20}%; animation-delay: {i}s; animation-duration: 4s; animation-iteration-count: infinite;"
-          ></div>
-        {/each}
-      </div>
 
       <!-- Header con nome -->
       <div class="relative bg-gradient-to-r {houseColors.primary} p-4 text-center overflow-hidden">
@@ -135,7 +121,7 @@
           <img 
             src={image} 
             alt={name}
-            class="w-full h-full object-cover transition-transform duration-300 hover:scale-105 filter sepia-[0.2] contrast-110 brightness-110"
+            class="w-full h-full object-contain transition-transform duration-300 hover:scale-105"
           />
         {:else}
           <div class="w-full h-full bg-gray-700 flex items-center justify-center">
@@ -144,56 +130,51 @@
         {/if}
         
         <!-- Badge della casa -->
-        {#if house}
+        {#if house == "" || house}
           <div class="absolute top-3 right-3 {houseColors.secondary} {houseColors.text} px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider shadow-lg border {houseColors.border}">
-            {house}
+            {house == "" ? "?" : house}
           </div>
         {/if}
       </div>
 
       <!-- Statistiche principali (FRONTALE) -->
-      <div class="p-5 bg-gradient-to-b from-amber-900 to-amber-800 flex-1 flex flex-col justify-between">
+      <div class="p-4 bg-gradient-to-b from-amber-900 to-amber-800 flex-1 flex flex-col justify-between">
         
         <!-- Informazioni base -->
-        <div class="space-y-4">
-          <div class="flex justify-between items-center py-3 border-b border-yellow-400/30">
+        <div class="space-y-3">
+          <div class="flex justify-between items-center pb-2 pt-1 border-b border-yellow-400/30">
             <span class="text-sm text-yellow-400 font-semibold uppercase tracking-wide">Specie</span>
-            <span class="text-sm text-amber-100 capitalize font-medium">{species}</span>
+            <span class="text-sm text-amber-100 capitalize font-medium">{species == "" ? "?" : species}</span>
           </div>
 
-          {#if formattedDate}
-            <div class="flex justify-between items-center py-3 border-b border-yellow-400/30">
+          {#if formattedDate == "" || formattedDate}
+            <div class="flex justify-between items-center py-2 border-b border-yellow-400/30">
               <span class="text-sm text-yellow-400 font-semibold uppercase tracking-wide">Data di Nascita</span>
-              <span class="text-sm text-amber-100 font-medium">{formattedDate}</span>
+              <span class="text-sm text-amber-100 font-medium">{formattedDate == "" ? "?" : formattedDate}</span>
             </div>
           {/if}
 
-          {#if ancestry}
-            <div class="flex justify-between items-center py-3 border-b border-yellow-400/30">
+          {#if ancestry == "" || ancestry}
+            <div class="flex justify-between items-center py-2 border-b border-yellow-400/30">
               <span class="text-sm text-yellow-400 font-semibold uppercase tracking-wide">Sangue</span>
-              <span class="text-sm text-amber-100 capitalize font-medium">{ancestry}</span>
+              <span class="text-sm text-amber-100 capitalize font-medium">{ancestry == "" ? "?" : ancestry}</span>
             </div>
           {/if}
 
-          {#if gender}
-            <div class="flex justify-between items-center py-3 border-b border-yellow-400/30">
+          {#if gender == "" || gender}
+            <div class="flex justify-between items-center border-b py-2 border-yellow-400/30">
               <span class="text-sm text-yellow-400 font-semibold uppercase tracking-wide">Genere</span>
-              <span class="text-sm text-amber-100 capitalize font-medium">{gender}</span>
+              <span class="text-sm text-amber-100 capitalize font-medium">{gender == "" ? "?" :  gender}</span>
             </div>
           {/if}
         </div>
-
-        <!-- Indicatore per girare la carta -->
-        <div class="text-center mt-6 pt-4 border-t border-yellow-400/30">
-          <span class="text-xs text-yellow-300 animate-pulse">✨ Clicca per scoprire di più ✨</span>
-        </div>
+        
       </div>
     </div>
 
     <!-- LATO POSTERIORE -->
     <div class="absolute inset-0 w-full h-full card-face card-back rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-b from-amber-900 via-amber-800 to-amber-900 border-4 {houseColors.border}" style="box-shadow: 0 25px 50px rgba(0,0,0,0.4), 0 0 30px rgba(212, 175, 55, 0.3);">
       
-      <!-- Gemma di rarità -->
       <div class="absolute -top-2 -left-2 w-8 h-8 bg-gradient-to-br from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center text-red-800 font-bold text-lg shadow-lg z-10 animate-pulse">
         ★
       </div>
@@ -203,9 +184,6 @@
         <h1 class="text-2xl font-bold {houseColors.text} tracking-wide drop-shadow-lg relative z-10">
           {name}
         </h1>
-        <p class="text-sm text-yellow-200 italic mt-1 opacity-90 relative z-10">
-          Dettagli Completi
-        </p>
       </div>
 
       <!-- Statistiche complete (POSTERIORE) -->

@@ -13,11 +13,11 @@ export async function POST({ request, cookies }) {
         body: JSON.stringify({ username, password })
     });
 
-    if (!response.ok) {
-        return json({ message: response.statusText }, { status: response.status });
-    }
-
     const { token, message } = await response.json(); // Assumendo che il backend Node.js restituisca { token: "..." }
+
+    if (!response.ok) {
+        return json({ message }, { status: response.status });
+    }
 
     // Imposta il token in un cookie HTTP-only
     cookies.set('authToken', token, {

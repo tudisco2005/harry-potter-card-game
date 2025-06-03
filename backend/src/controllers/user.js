@@ -64,7 +64,10 @@ export const createUserController = (mongodb) => {
         // fetch card from https://hp-api.onrender.com/api/characters
         const response = await fetch('https://hp-api.onrender.com/api/characters');
         const cards = await response.json();
-        const game_cards = cards.map(card => ({ cardId: card.id, quantity: 0 }));
+        const game_cards = cards.map(card => ({ 
+            ...card,
+            quantity: 0 
+        }));
 
 
         try {
@@ -207,7 +210,7 @@ export const getUserInfoController = (mongodb) => {
                 username: user.username,
                 email: user.email,
                 favouriteWizard: user.favouriteWizard,
-                game_cards: user.game_cards || [], // Ensure cards is an array
+                game_cards: user.game_cards || [], // Ensure game_cards is an array
                 trades: user.trades || [], // Ensure trades is an array
                 paymentInfo: user.paymentInfo || {}, // Ensure paymentInfo is an object
                 balance: user.balance || 0, // Ensure balance is a number

@@ -1,5 +1,8 @@
 <script>
+    import { goto } from '$app/navigation';
 	import CharacterCard from './../components/CharacterCard.svelte';
+
+  let { data } = $props();
 
   const harryData = {
     "id": "9e3f7ce4-b9a7-4244-b709-dae5c1f1d4a8",
@@ -32,6 +35,11 @@
     "alive": true,
     "image": "https://ik.imagekit.io/hpapi/harry.jpg"
   };
+
+  function handleHomeRegister() {
+    if(data.user.isAuthenticated) goto("/album")
+    else goto("/register")
+  }
 </script>
 
 <section class="bg-white dark:bg-gray-900 flex items-center w-full pb-8">
@@ -51,8 +59,8 @@
         </p>
 
         <div class="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
-          <a href="/register" class="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-center text-white rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:ring-4 focus:ring-red-300 dark:focus:ring-red-900 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
-            Registrati ora
+          <a on:click={handleHomeRegister} class="inline-flex items-center justify-center px-6 py-3 text-base font-medium text-center text-white rounded-lg bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 focus:ring-4 focus:ring-red-300 dark:focus:ring-red-900 transition-all duration-300 shadow-lg hover:shadow-xl transform hover:-translate-y-1">
+            {data.user.isAuthenticated ? "Gioca" : "Registrati ora"}
             <svg class="w-5 h-5 ml-2 -mr-1" fill="currentColor" viewBox="0 0 20 20">
               <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z" clip-rule="evenodd"></path>
             </svg>
@@ -68,13 +76,13 @@
       </div>
 
       <!-- Carte Impilate -->
-      <div class="order-2 relative scale-95 md:scale-98 lg:scale-100">
+      <div class="order-2 relative md:scale-98 lg:scale-100">
         <div class="relative w-fit mx-auto">
                     <!-- Effetto di luminosità di sfondo -->
           <div class="absolute inset-0 bg-gradient-to-r from-red-500/10 to-yellow-500/10 rounded-full blur-3xl scale-110 lg:scale-125 -z-10 opacity-50"></div> 
 
           <!-- Carta di sfondo (Ron) -->
-          <div class="absolute top-0 left-0 transform -rotate-12 translate-y-2 opacity-70 scale-98">
+          <div class="absolute top-0 left-0 transform -rotate-12 translate-y-2 opacity-95 scale-95">
             <CharacterCard {...harryData} />
           </div>
           
@@ -84,7 +92,7 @@
           </div>
           
           <!-- Carta in primo piano (Harry) -->
-          <div class="relative z-10 transform hover:scale-105 transition-transform duration-300">
+          <div class="relative z-10 transform hover:scale-105 transition-transform duration-300 ">
             <CharacterCard {...harryData} />
           </div>
         </div>
