@@ -1,6 +1,6 @@
 <script>
     import { goto } from '$app/navigation';
-	import CharacterCard from './../components/CharacterCard.svelte';
+	import CharacterCard from '../components/CharacterCardContent.svelte';
 
   let { data } = $props();
 

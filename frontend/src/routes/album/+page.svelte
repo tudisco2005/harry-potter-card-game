@@ -1,8 +1,9 @@
 <script>
-    import CharacterCard from "../../components/CharacterCard.svelte";
+	import CharacterCard from './../../components/CharacterCard.svelte';
     let { data } = $props();
 
     const game_cards = data.user.game_cards;
+    //game_cards[0].quantity = 900; // For testing purposes, set the first card quantity to 20
 
     // render cards in batches
     let renderLimit = $state(30); // Limite di rendering iniziale
@@ -170,10 +171,12 @@
                     <label
                         class="block mb-4 font-medium text-gray-900 dark:text-white"
                     >
-                        Numero di carte da visualizzare: {renderLimit} 
-                        {#if renderLimit > game_cards.length/3}
+                        Numero di carte da visualizzare: {renderLimit}
+                        {#if renderLimit > game_cards.length / 3}
                             <div></div>
-                            <span class="text-red-500">(potrebbe rallentare la pagina)</span>
+                            <span class="text-red-500"
+                                >(potrebbe rallentare la pagina)</span
+                            >
                         {/if}
                     </label>
 
@@ -323,7 +326,7 @@
         class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"
     >
         {#each game_cards_filtered.slice(0, renderLimit) as card}
-            <CharacterCard {...card} />
+            <CharacterCard quantity={card.quantity} content={card} />
         {/each}
 
         <!-- Sentinel element to detect scroll position -->

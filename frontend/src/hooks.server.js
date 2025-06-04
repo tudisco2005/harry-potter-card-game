@@ -1,4 +1,3 @@
-// Esempio: src/hooks.server.js
 import { PUBLIC_API_SERVER_URL } from '$env/static/public';
 
 export async function handle({ event, resolve }) {
