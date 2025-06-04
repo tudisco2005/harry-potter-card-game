@@ -1,16 +1,16 @@
-import {hashPassword, verifyPassword} from '../auth/crypto.js';
+import { hashPassword, verifyPassword } from '../auth/crypto.js';
 import userModel from '../models/user.js';
 import blacklistSchema from './blacklist.js';
-import { generateToken,verifyToken } from '../auth/auth.js';
+import { generateToken, verifyToken } from '../auth/auth.js';
 
 
 export const createUserController = (mongodb) => {
     return async function registerUser(req, res) {
         const { username, email, favouriteWizard, password, confirmPassword } = req.body;
-        
+
         // Validate input
         // - check if fields are not empty
-        if(!username || !email || !favouriteWizard || !password || !confirmPassword) {
+        if (!username || !email || !favouriteWizard || !password || !confirmPassword) {
             console.log("[-] Registrazione fallita: Campi mancanti nella registrazione");
             return res.status(400).send({ message: "Non sono presenti tutti i campi" });
         }
@@ -29,7 +29,7 @@ export const createUserController = (mongodb) => {
         }
 
         // - if passwords are the same
-        if(password != confirmPassword) {
+        if (password != confirmPassword) {
             console.log("[-] Registrazione fallita: Le password non corrispondono");
             return res.status(400).send({ message: "Le password non corrispondono" });
         }
@@ -64,9 +64,9 @@ export const createUserController = (mongodb) => {
         // fetch card from https://hp-api.onrender.com/api/characters
         const response = await fetch('https://hp-api.onrender.com/api/characters');
         const cards = await response.json();
-        const game_cards = cards.map(card => ({ 
+        const game_cards = cards.map(card => ({
             ...card,
-            quantity: 0 
+            quantity: 0
         }));
 
 
@@ -221,7 +221,7 @@ export const getUserInfoController = (mongodb) => {
                 message: "Informazioni utente recuperate con successo",
                 data: responseData
             });
-            
+
             console.log("[+] Informazioni utente recuperate con successo");
 
         } catch (error) {
@@ -230,6 +230,298 @@ export const getUserInfoController = (mongodb) => {
         }
     }
 }
+
+// recive {searchQuery, sortBy, sortByAttributeName }
+// searchQuery is a string to search in the cards all attributes
+// sortby options "alphabetic", "quantity", "attribute"
+
+// return `{filtered_game_cards}` with the filtered and sorted cards
+export const searchUserCardsController = (mongodb) => {
+    return async function searchUserCards(req, res) {
+        try {
+            // Get user info from database
+            const user = await userModel.findOne({ _id: req.userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+
+            // Get search query and sort options from GET request
+            const { searchQuery = "", sortBy, sortByAttributeName } = req.query;
+
+            console.log("[-] Ricerca carte in corso:", {
+                searchQuery,
+                sortBy,
+                attribute: sortByAttributeName,
+            });
+
+            // Validate input
+            if (!sortBy || !sortByAttributeName) {
+                console.log("[-] Ricerca fallita: Campi mancanti nella ricerca");
+                return res.status(400).send({ message: "Non sono presenti tutti i campi per la ricerca" });
+            }
+
+            let filteredCards = [...user.game_cards];
+
+            // If query is empty use all cards and skip card search
+            if (searchQuery.trim() === "") {
+                console.log("[-] Nessuna query di ricerca fornita, restituzione di tutte le carte");
+            } else {
+                // Filter cards based on search query
+                const queryLower = searchQuery.trim().toLowerCase();
+
+                // const userInput = "harry"; // o "!human" o "wizard"
+                // const queryLower = userInput.toLowerCase();
+
+                filteredCards = filteredCards.filter(card => {
+                    // Determina se la ricerca è inversa e qual è il termine di ricerca effettivo.
+                    let processedQuery = queryLower; // Inizializza con la query originale (già minuscola).
+                    let isInverseSearch = false;
+
+                    if (queryLower.startsWith('!')) {
+                        isInverseSearch = true;
+                        processedQuery = queryLower.substring(1); // Rimuove '!' per ottenere il termine di ricerca.
+                    }
+
+                    // Funzione helper per determinare se una carta corrisponde POSITIVAMENTE al termine di ricerca.
+                    // Restituisce true se la carta corrisponde, false altrimenti.
+                    const cardPositivelyMatches = (currentCard, queryTerm) => {
+                        // Nome principale
+                        if (currentCard.name && currentCard.name.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Nomi alternativi
+                        if (currentCard.alternate_names && Array.isArray(currentCard.alternate_names)) {
+                            if (currentCard.alternate_names.some(altName =>
+                                altName && altName.toLowerCase().includes(queryTerm)
+                            )) {
+                                return true;
+                            }
+                        }
+
+                        // Specie
+                        if (currentCard.species && currentCard.species.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Genere
+                        if (currentCard.gender && currentCard.gender.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Casa di Hogwarts
+                        if (currentCard.house && currentCard.house.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Ascendenza
+                        if (currentCard.ancestry && currentCard.ancestry.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Colore degli occhi
+                        if (currentCard.eyeColour && currentCard.eyeColour.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Colore dei capelli
+                        if (currentCard.hairColour && currentCard.hairColour.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Bacchetta magica (legno, nucleo)
+                        if (currentCard.wand) {
+                            if (currentCard.wand.wood && currentCard.wand.wood.toLowerCase().includes(queryTerm)) {
+                                return true;
+                            }
+                            if (currentCard.wand.core && currentCard.wand.core.toLowerCase().includes(queryTerm)) {
+                                return true;
+                            }
+                        }
+
+                        // Patronus
+                        if (currentCard.patronus && currentCard.patronus.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Attore principale
+                        if (currentCard.actor && currentCard.actor.toLowerCase().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Attori alternativi
+                        if (currentCard.alternate_actors && Array.isArray(currentCard.alternate_actors)) {
+                            if (currentCard.alternate_actors.some(altActor =>
+                                altActor && altActor.toLowerCase().includes(queryTerm)
+                            )) {
+                                return true;
+                            }
+                        }
+
+                        // Ricerca per valori booleani specifici.
+                        // Una "corrispondenza positiva" qui significa che il queryTerm corrisponde alla condizione booleana.
+                        // Ad esempio, se queryTerm è "wizard", una corrispondenza positiva si ha se card.wizard === true.
+                        // Se queryTerm è "muggle", una corrispondenza positiva si ha se card.wizard === false.
+                        if (queryTerm === 'wizard' || queryTerm === 'mago') {
+                            if (currentCard.wizard === true) return true;
+                        }
+                        if (queryTerm === 'muggle' || queryTerm === 'babbano') {
+                            // "muggle" corrisponde positivamente se la carta NON è un mago.
+                            if (currentCard.wizard === false) return true;
+                        }
+                        if (queryTerm === 'student' || queryTerm === 'studente') {
+                            if (currentCard.hogwartsStudent === true) return true;
+                        }
+                        if (queryTerm === 'staff' || queryTerm === 'professore' || queryTerm === 'insegnante') {
+                            if (currentCard.hogwartsStaff === true) return true;
+                        }
+                        if (queryTerm === 'alive' || queryTerm === 'vivo') {
+                            if (currentCard.alive === true) return true;
+                        }
+                        if (queryTerm === 'dead' || queryTerm === 'morto') {
+                            // "dead" corrisponde positivamente se la carta NON è viva.
+                            if (currentCard.alive === false) return true;
+                        }
+
+                        // Ricerca per anno di nascita
+                        if (currentCard.yearOfBirth && currentCard.yearOfBirth.toString().includes(queryTerm)) {
+                            return true;
+                        }
+
+                        // Se nessuna delle condizioni precedenti è soddisfatta, la carta non corrisponde positivamente.
+                        return false;
+                    };
+
+                    // Verifica se la carta corrente corrisponde positivamente al termine di ricerca processato.
+                    const hasPositiveMatch = cardPositivelyMatches(card, processedQuery);
+
+                    // Decide se mantenere la carta in base al tipo di ricerca (normale o inversa).
+                    if (isInverseSearch) {
+                        // Per una ricerca inversa (es. "!human"), mantenere la carta se NON c'è una corrispondenza positiva.
+                        return !hasPositiveMatch;
+                    } else {
+                        // Per una ricerca normale (es. "human"), mantenere la carta se C'È una corrispondenza positiva.
+                        return hasPositiveMatch;
+                    }
+                });
+            }
+
+            // Sort cards based on sort options
+            try {
+                if (sortBy === "alphabetic") {
+                    filteredCards.sort((a, b) => {
+                        const nameA = a.name || "";
+                        const nameB = b.name || "";
+                        return nameA.localeCompare(nameB);
+                    });
+                } else if (sortBy === "quantity") {
+                    filteredCards.sort((a, b) => {
+                        const qtyA = a.quantity || 0;
+                        const qtyB = b.quantity || 0;
+                        return qtyA - qtyB;
+                    });
+                } else if (sortBy === "attribute") {
+                    filteredCards.sort((a, b) => {
+                        const valueA = a[sortByAttributeName];
+                        const valueB = b[sortByAttributeName];
+
+                        // --- GESTIONE PRIORITARIA DEI VALORI SPECIALI ("?", null, undefined) ---
+                        // L'obiettivo è ottenere un ordinamento dove:
+                        // 1. Gli elementi "normali" vengono prima, ordinati tra loro.
+                        // 2. Seguono gli elementi con valore null/undefined.
+                        // 3. Infine, gli elementi con valore "?".
+                        // Questo dà l'effetto di "rimuovere" i null/? e "reinserirli" alla fine nell'ordine corretto.
+
+                        // --- PRIMA REGOLA DI PRIORITÀ: Gestione dei valori "?" ---
+                        // I valori "?" devono essere sempre considerati i più "grandi", quindi vanno alla fine assoluta.
+                        const isAQuestionMark = valueA === "";
+                        const isBQuestionMark = valueB === "";
+
+                        if (isAQuestionMark && isBQuestionMark) {
+                            // Se entrambi sono "?", sono uguali in questo contesto di gruppo.
+                            return 0;
+                        }
+                        if (isAQuestionMark) {
+                            // Se solo valueA è "?", A è "maggiore" e va dopo B.
+                            return 1; // Sposta A verso la fine.
+                        }
+                        if (isBQuestionMark) {
+                            // Se solo valueB è "?", B è "maggiore" (quindi A è "minore") e A va prima di B.
+                            return -1; // Sposta B verso la fine (lasciando A prima).
+                        }
+
+                        // A questo punto, sappiamo che né valueA né valueB sono "?".
+
+                        // --- SECONDA REGOLA DI PRIORITÀ: Gestione dei valori null o undefined ---
+                        // Questi valori vengono dopo i "normali" ma prima dei "?".
+                        // Il controllo per "?" è già avvenuto, quindi questa logica li posiziona correttamente.
+                        const isANullOrUndefined = valueA == null; // '==' cattura sia null che undefined.
+                        const isBNullOrUndefined = valueB == null;
+
+                        if (isANullOrUndefined && isBNullOrUndefined) {
+                            // Se entrambi sono null/undefined, sono uguali in questo contesto di gruppo.
+                            return 0;
+                        }
+                        if (isANullOrUndefined) {
+                            // Se solo valueA è null/undefined, A va dopo B (che è un valore "normale").
+                            return 1; // Sposta A dopo i valori normali (ma prima di eventuali "?").
+                        }
+                        if (isBNullOrUndefined) {
+                            // Se solo valueB è null/undefined, B va dopo A (che è un valore "normale").
+                            return -1; // Sposta B dopo i valori normali (lasciando A prima).
+                        }
+
+                        // A questo punto della funzione, i valori non sono "?", né null, né undefined.
+                        // Si tratta di valori "normali" che devono essere ordinati tra loro.
+
+                        // --- TERZA REGOLA: Ordinamento standard per valori "normali" ---
+                        if (typeof valueA === 'number' && typeof valueB === 'number') {
+                            // Ordinamento numerico ascendente.
+                            return valueA - valueB;
+                        } else if (typeof valueA === 'boolean' && typeof valueB === 'boolean') {
+                            // Ordinamento booleano (es. true prima di false).
+                            // true (1) vs false (0). valueA ? -1 : 1 => se A è true, A viene prima (-1).
+                            return valueA === valueB ? 0 : valueA ? -1 : 1;
+                        } else {
+                            // Per tutti gli altri casi (es. stringhe), si convertono i valori
+                            // a stringa e si usa localeCompare per un ordinamento alfabetico.
+                            return String(valueA).localeCompare(String(valueB));
+                        }
+                    });
+                } else {
+                    console.log("[-] Tipo di ordinamento non riconosciuto:", sortBy);
+                    return res.status(400).send({ message: "Tipo di ordinamento non valido" });
+                }
+            } catch (sortError) {
+                console.error("[-] Errore durante l'ordinamento:", sortError);
+                return res.status(500).send({ message: "Errore durante l'ordinamento delle carte" });
+            }
+
+            console.log("[+] Carte filtrate e ordinate con successo:", {
+                searchQuery,
+                sortBy,
+                sortByAttributeName,
+                filteredCardsCount: filteredCards.length
+            });
+
+            // Send response with filtered and sorted cards
+            res.status(200).send({
+                message: "Carte filtrate e ordinate con successo",
+                filtered_game_cards: filteredCards
+            });
+
+        } catch (error) {
+            console.error("[-] Errore durante la ricerca delle carte:", error);
+            res.status(500).send({ message: "Errore durante la ricerca delle carte" });
+        }
+    }
+}
+
 
 export const updateUserInfoController = (mongodb) => {
     return async function updateUserInfo(req, res) {
@@ -249,7 +541,7 @@ export const updateUserInfoController = (mongodb) => {
             const { username, favouriteWizard } = req.body;
 
             // Validate input
-            if (!username  || !favouriteWizard) {
+            if (!username || !favouriteWizard) {
                 console.log("[-] Aggiornamento fallito: Campi mancanti nell'aggiornamento");
                 return res.status(400).send({ message: "Non sono presenti tutti i campi" });
             }
@@ -278,7 +570,7 @@ export const updateUserInfoController = (mongodb) => {
                 console.error("[-] Errore durante il salvataggio delle informazioni utente:", error);
                 return res.status(500).send({ message: "Errore Server" });
             });
-            
+
             // Log successful update
             console.log("[+] Informazioni utente aggiornate con successo:", { username, favouriteWizard });
             // Send success response

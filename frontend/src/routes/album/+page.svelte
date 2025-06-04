@@ -1,8 +1,9 @@
 <script>
-	import CharacterCard from './../../components/CharacterCard.svelte';
+    import CharacterCard from "./../../components/CharacterCard.svelte";
+    import { browser } from '$app/environment';
+
     let { data } = $props();
 
-    const game_cards = data.user.game_cards;
     //game_cards[0].quantity = 900; // For testing purposes, set the first card quantity to 20
 
     // render cards in batches
@@ -52,15 +53,46 @@
     });
 
     onDestroy(() => {
+        if (!browser) return;
         window.removeEventListener("scroll", onScroll);
     });
 
     // ricerca e ordinamento lato server
     let searchQuery = $state("");
-    const game_cards_filtered = game_cards;
+    let game_cards_filtered = $state(data.user.game_cards);
     let sortingModal = $state(false);
-    let sortBy = $state("alphabetic");
-    let sortOrderAttribute = $state("name");
+    let sortBy = $state("quantity");
+    let sortByAttributeName = $state("name");
+
+    let attributes = [
+        "species",
+        "gender",
+        "house",
+        "dateOfBirth",
+        "ancestry",
+        "eyeColour",
+        "hairColour",
+        "patronus",
+    ];
+
+    async function searchCards() {
+        const params = new URLSearchParams({
+            searchQuery,
+            sortBy,
+            sortByAttributeName,
+        });
+        await fetch(`/api/search-card?${params.toString()}`)
+            .then((response) => response.json())
+            .then((data) => {
+                console.log("Carte trovate:", data);
+                game_cards_filtered = data.filtered_game_cards; // Aggiorna le carte filtrate
+            })
+            .catch((error) => {
+                console.error("Errore durante la ricerca delle carte:", error);
+            });
+
+        }
+        let helpBox = $state(false);
 </script>
 
 <!-- modal ordinamento risultati -->
@@ -121,33 +153,35 @@
                     <div class="flex items-center mb-2">
                         <input
                             type="radio"
-                            id="alphabetic"
-                            name="sort-method"
-                            value="alphabetic"
-                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
-                            bind:group={sortBy}
-                        />
-                        <label
-                            for="alphabetic"
-                            class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
-                        >
-                            Alfabetico
-                        </label>
-                    </div>
-                    <div class="flex items-center mb-2">
-                        <input
-                            type="radio"
                             id="quantity"
                             name="sort-method"
                             value="quantity"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
                             bind:group={sortBy}
+                            on:change={searchCards}
                         />
                         <label
                             for="quantity"
                             class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
                         >
                             Quantità posseduta
+                        </label>
+                    </div>
+                    <div class="flex items-center mb-2">
+                        <input
+                            type="radio"
+                            id="alphabetic"
+                            name="sort-method"
+                            value="alphabetic"
+                            class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
+                            bind:group={sortBy}
+                            on:change={searchCards}
+                        />
+                        <label
+                            for="alphabetic"
+                            class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
+                        >
+                            Alfabetico (Nome)
                         </label>
                     </div>
                     <div class="flex items-center">
@@ -158,21 +192,42 @@
                             value="attribute"
                             class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500"
                             bind:group={sortBy}
+                            on:change={searchCards}
                         />
                         <label
                             for="attribute"
                             class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
                         >
-                            Attributo Specifico
+                            Alfabetico (Attributo Specifico)
                         </label>
                     </div>
+                    <!-- per attributo -->
+                    {#if sortBy === "attribute"}
+                        <div class="mt-4">
+                            <label for="sort-order" class="sr-only"
+                                >Ordine di sort</label
+                            >
+                            <select
+                                id="sort-order"
+                                class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                                bind:value={sortByAttributeName}
+                                on:change={searchCards}
+                            >
+                                {#each attributes as attribute}
+                                    <option value={attribute}
+                                        >{attribute}</option
+                                    >
+                                {/each}
+                            </select>
+                        </div>
+                    {/if}
                 </div>
                 <div class="mb-4 items-center justify-center">
                     <label
                         class="block mb-4 font-medium text-gray-900 dark:text-white"
                     >
                         Numero di carte da visualizzare: {renderLimit}
-                        {#if renderLimit > game_cards.length / 3}
+                        {#if renderLimit > game_cards_filtered.length / 3}
                             <div></div>
                             <span class="text-red-500"
                                 >(potrebbe rallentare la pagina)</span
@@ -189,7 +244,7 @@
                             id="labels-range-input"
                             type="range"
                             min="25"
-                            max={game_cards.length}
+                            max={game_cards_filtered.length}
                             class="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
                         />
                         <span
@@ -198,40 +253,22 @@
                         >
                         <span
                             class="text-sm text-gray-500 dark:text-gray-400 absolute start-1/3 -translate-x-1/2 rtl:translate-x-1/2 -bottom-6"
-                            >{(game_cards.length / 3).toFixed(0)}</span
+                            >{(game_cards_filtered.length / 3).toFixed(0)}</span
                         >
                         <span
                             class="text-sm text-gray-500 dark:text-gray-400 absolute start-2/3 -translate-x-1/2 rtl:translate-x-1/2 -bottom-6"
                         >
-                            {((2 * game_cards.length - 25) / 3 + 25).toFixed(
-                                0,
-                            )}</span
+                            {(
+                                (2 * game_cards_filtered.length - 25) / 3 +
+                                25
+                            ).toFixed(0)}</span
                         >
                         <span
                             class="text-sm text-gray-500 dark:text-gray-400 absolute end-0 -bottom-6"
-                            >Max ({game_cards.length})</span
+                            >Max ({game_cards_filtered.length})</span
                         >
                     </div>
                 </div>
-
-                <!-- per attributo -->
-                {#if sortBy === "attribute"}
-                    <div>
-                        <label for="sort-order" class="sr-only"
-                            >Ordine di sort</label
-                        >
-                        <select
-                            id="sort-order"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
-                            bind:value={sortOrderAttribute}
-                        >
-                            <option value="name">Nome</option>
-                            <option value="birth_date">Data di nascita</option>
-                            <option value="house">Casa</option>
-                            <option value="species">Specie</option>
-                        </select>
-                    </div>
-                {/if}
             </div>
         </div>
     </div>
@@ -268,12 +305,42 @@
                 </div>
                 <input
                     bind:value={searchQuery}
+                    on:input={searchCards}
+                    on:keydown={(e) => {
+                        if (e.key === "Enter") {
+                            e.preventDefault(); // Prevent form submission
+                            searchCards();
+                        }
+                    }}
                     type="text"
                     id="simple-search"
-                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                    class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full ps-10 pe-10 p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                     placeholder="Cerca nome, data di nascita, Bacchetta magica, ..."
                     required
                 />
+                <a
+                    type="button"
+                    on:click={() => (helpBox = !helpBox)}
+                    class="absolute inset-y-0 end-0 flex items-center pe-3"
+                >
+                    <svg class="w-6 h-6 hover:border-2 rounded-full m-1 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
+                        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M9.529 9.988a2.502 2.502 0 1 1 5 .191A2.441 2.441 0 0 1 12 12.582V14m-.01 3.008H12M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                    </svg>
+                </a>
+                {#if helpBox}
+                    <div class="absolute z-10 start-0 mt-2 w-64 p-4 bg-white border border-gray-300 rounded-lg shadow-lg dark:bg-gray-800 dark:border-gray-600">
+                        <div class="text-sm text-gray-700 dark:text-gray-300">
+                            Puoi cercare per ogni valore presente nelle carte, come nome, data di nascita, Bacchetta magica, ecc. 
+                            <br>
+                            <hr class="my-2 border-gray-300 dark:border-gray-600">
+                            Si può anche cercare per attributi negati come 
+                            <kbd class="px-1 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">!human</kbd>
+                            per escludere i personaggi umani, o 
+                            <kbd class="px-1 py-1 text-xs font-semibold text-gray-800 bg-gray-100 border border-gray-200 rounded-lg dark:bg-gray-600 dark:text-gray-100 dark:border-gray-500">!gryffindor</kbd> 
+                            per cercare solo i personaggi non della casa Griffindor
+                        </div>
+                    </div>
+                {/if}
             </div>
             <button
                 class="p-2.5 ms-2 text-sm font-medium text-white bg-blue-700 rounded-lg border border-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
@@ -302,18 +369,34 @@
         <!-- ricerce d'esempio -->
         <div class="w-full flex flex-wrap justify-center gap-4 mt-4">
             <button
+                on:click={() => {
+                    searchQuery = "";
+                    searchCards();
+                }}
                 class="px-4 py-2 text-gray-300 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700"
                 >Tutti</button
             >
             <button
+                on:click={() => {
+                    searchQuery = "gryffindor";
+                    searchCards();
+                }}
                 class="px-4 py-2 text-gray-300 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700"
-                >Streghe e Maghi</button
+                >Griffindoro</button
             >
             <button
+                on:click={() => {
+                    searchQuery = "pure-blood";
+                    searchCards();
+                }}
                 class="px-4 py-2 text-gray-300 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700"
-                >Creature Magiche</button
+                >Puro Sangue</button
             >
             <button
+                on:click={() => {
+                    searchQuery = "!human";
+                    searchCards();
+                }}
                 class="px-4 py-2 text-gray-300 bg-gray-200 dark:bg-gray-800 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-700"
                 >Personaggi Non Umani</button
             >
