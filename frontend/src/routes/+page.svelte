@@ -1,6 +1,6 @@
 <script>
     import { goto } from '$app/navigation';
-	import CharacterCard from '../components/CharacterCardContent.svelte';
+	import CharacterCard from '../components/CharacterCard.svelte';
 
   let { data } = $props();
 
@@ -83,17 +83,17 @@
 
           <!-- Carta di sfondo (Ron) -->
           <div class="absolute top-0 left-0 transform -rotate-12 translate-y-2 opacity-95 scale-95">
-            <CharacterCard {...harryData} />
+            <CharacterCard quantity={1} content={harryData} />
           </div>
           
           <!-- Carta intermedia (Hermione) -->
           <div class="absolute top-0 left-0 transform -rotate-6 opacity-85 scale-98">
-            <CharacterCard {...harryData} />
+            <CharacterCard quantity={1} content={harryData} />
           </div>
           
           <!-- Carta in primo piano (Harry) -->
           <div class="relative z-10 transform hover:scale-105 transition-transform duration-300 ">
-            <CharacterCard {...harryData} />
+            <CharacterCard quantity={1} content={harryData} />
           </div>
         </div>
       </div>      

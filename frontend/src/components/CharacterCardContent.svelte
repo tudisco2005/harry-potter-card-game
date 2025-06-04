@@ -1,12 +1,11 @@
 <script>
-  export let id = "";
   export let name = "";
   export let alternateNames = [];
   export let species = "";
   export let gender = "";
   export let house = "";
   export let dateOfBirth = "";
-  export let yearOfBirth = null;
+  // export let yearOfBirth = null;
   export let wizard = false;
   export let ancestry = "";
   export let eyeColour = "";
@@ -16,7 +15,7 @@
   export let hogwartsStudent = false;
   export let hogwartsStaff = false;
   export let actor = "";
-  export let alternateActors = [];
+  // export let alternateActors = [];
   export let alive = true;
   export let image = "";
 
