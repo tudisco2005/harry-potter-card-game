@@ -260,7 +260,7 @@ export const searchUserCardsController = (mongodb) => {
             });
 
             // Validate input
-            if (!sortBy || !sortByAttributeName) {
+            if ((sortBy == "attribute" && sortByAttributeName != null) || !sortBy) {
                 console.log("[-] Ricerca fallita: Campi mancanti nella ricerca");
                 return res.status(400).send({ message: "Non sono presenti tutti i campi per la ricerca" });
             }
@@ -423,7 +423,7 @@ export const searchUserCardsController = (mongodb) => {
                     filteredCards.sort((a, b) => {
                         const qtyA = a.quantity || 0;
                         const qtyB = b.quantity || 0;
-                        return qtyA - qtyB;
+                        return qtyB - qtyA;
                     });
                 } else if (sortBy === "attribute") {
                     filteredCards.sort((a, b) => {
@@ -522,7 +522,6 @@ export const searchUserCardsController = (mongodb) => {
     }
 }
 
-
 export const updateUserInfoController = (mongodb) => {
     return async function updateUserInfo(req, res) {
         try {
@@ -616,6 +615,76 @@ export const deleteUserController = (mongodb) => {
         } catch (error) {
             console.error("[-] Errore durante l'eliminazione dell'utente:", error);
             res.status(500).send({ message: "Errore durante l'eliminazione dell'utente" });
+        }
+    }
+}
+
+export const sellUserCardsController = (mongodb) => {
+    return async function sellUserCards(req, res) {
+        try {
+            const userId = req.userId;
+            const { cards } = req.body;
+
+            // cards = [{id, quantity}]
+
+            console.log("[+] Vendita di carte in corso...")
+
+            // Validate input
+            if (!Array.isArray(cards) || cards.length === 0) {
+                console.log(cards)
+                console.log("[-] Vendita fallita: Nessuna carta selezionata");
+                return res.status(400).send({ message: "Nessuna carta selezionata" });
+            }
+
+            // Get user info from database
+            const user = await userModel.findOne({ _id: userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+
+            // for ech card to sell check if the user has enough quantity
+            // if yes subtract quantity from that card with a min of 1, for every 2 card add 1 to the balance
+            // if no send an error message
+            let earned = 0; // Total credits earned from selling cards
+
+            for (const card of cards) {
+                const userCard = user.game_cards.find(c => c.id.toString() === card.id);
+                if (!userCard) {
+                    console.log(`[-] Carta con ID ${card.id} non trovata tra le carte dell'utente`);
+                    return res.status(404).send({ message: `Carta con ID ${card.id} non trovata` });
+                }
+
+                if (userCard.quantity - 1 < card.quantity || card.quantity <= 0) {
+                    console.log(`[-] Quantità insufficiente per la carta con ID ${card.id}`);
+                    return res.status(400).send({ message: `Quantità insufficiente per la carta con ID ${card.id}` });
+                }
+
+                // Calculate balance increment
+                const balanceIncrement = Math.floor(card.quantity / 2);
+                user.balance += balanceIncrement;
+                earned += balanceIncrement;
+                console.log(`[+] Vendita di ${card.quantity} carte con ID ${card.id}, guadagno di ${balanceIncrement} crediti`);
+
+                // Subtract quantity from the user's card
+                userCard.quantity -= card.quantity;
+            }
+
+            // save to the database
+            await userModel.updateOne({ _id: userId }, { $set: { game_cards: user.game_cards, balance: user.balance } }).catch((error) => {
+                console.error("[-] Errore durante il salvataggio delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            console.log("[+] Vendita delle carte completata con successo");
+            res.status(200).send({ message: "Vendita delle carte completata con successo", creditsEarned: earned });
+        } catch (error) {
+            console.error("[-] Errore durante la vendita delle carte:", error);
+            res.status(500).send({ message: "Errore durante la vendita delle carte" });
         }
     }
 }

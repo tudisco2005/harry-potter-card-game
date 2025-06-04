@@ -151,23 +151,23 @@ const userSchema = new mongoose.Schema({
         type: Date,
         default: Date.now
     },
-    paymentInfo: {
-        cardNumber: {
-            type: String,
-            required: false,
-            trim: true
-        },
-        expiryDate: {
-            type: String,
-            required: false,
-            trim: true
-        },
-        cvv: {
-            type: String,
-            required: false,
-            trim: true
-        },
-    },
+    // paymentInfo: {
+    //     cardNumber: {
+    //         type: String,
+    //         required: false,
+    //         trim: true
+    //     },
+    //     expiryDate: {
+    //         type: String,
+    //         required: false,
+    //         trim: true
+    //     },
+    //     cvv: {
+    //         type: String,
+    //         required: false,
+    //         trim: true
+    //     },
+    // },
     balance: {
         type: Number,
         default: 0

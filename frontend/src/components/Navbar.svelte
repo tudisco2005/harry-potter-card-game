@@ -9,10 +9,12 @@
     export let logged; // Simulate logged in state 
     export let username = ""; // Simulate username
     export let email = ""
+    export let balance;
 
     // currentPath is now received as a prop from the parent component
     let navItems = [
         { name: 'Album', path: '/album' },
+        { name: "Vendi", path: '/vendi' },
         { name: 'Negozio', path: '/negozio' },
         { name: 'Scambi', path: '/scambi' }
     ];
@@ -31,7 +33,7 @@
         <span class="self-center whitespace-nowrap text-wrap md:text-xl font-semibold dark:text-white">Il Patto dei Maghi</span>
     </NavBrand>
     <div class="flex md:order-2">
-        <div class="pr-1 sm:pr-2 md:pr-3">
+        <div class="pr-1 mt-1 sm:pr-2 md:pr-3">
             <DarkMode />
         </div>
         {#if !logged} 
@@ -45,20 +47,26 @@
                 </div> 
             </Button>
         {:else}
-            <div class="flex items-center md:order-2 border-2 rounded-full border-gray-800 hover:border-gray-400">
-                <Avatar id="avatar-menu" src="user.jpg" />
-            </div>
-            <Dropdown placement="bottom" triggeredBy="#avatar-menu">
-            <DropdownHeader>
-                <span class="block text-sm text-center">{username}</span>
-                <span class="block truncate text-sm font-medium">{email}</span>
-            </DropdownHeader>
-            <DropdownItem on:click={() => {goto("/profile")}}>Profilo</DropdownItem>
-            <DropdownItem on:click={() => {goto("/payment")}}>Pagamento</DropdownItem>
+            <div id="avatar-menu" class="flex items-center space-x-2 md:space-x-3 ">
+                <div class="pl-2 text-sm hidden md:block">{balance} Crediti</div>
+                <div>
+                    <div class="flex items-center md:order-2 border-2 rounded-full border-gray-800 hover:border-gray-400">
+                        <Avatar src="user.jpg" />
+                    </div>
+                    <Dropdown placement="bottom" triggeredBy="#avatar-menu">
+                    <DropdownHeader>
+                        <span class="block text-sm text-center">{username}</span>
+                        <span class="block text-sm text-center md:hidden">{balance} Crediti</span>
+                        <span class="block truncate text-sm font-medium">{email}</span>
+                    </DropdownHeader>
+                    <DropdownItem on:click={() => {goto("/profile")}}>Profilo</DropdownItem>
+                    <DropdownItem on:click={() => {goto("/payment")}}>Pagamento</DropdownItem>
 
-            <DropdownDivider />
-            <DropdownItem class="text-red-600" on:click={() => {goto("/logout")}}>Esci</DropdownItem>
-            </Dropdown>
+                    <DropdownDivider />
+                    <DropdownItem class="text-red-600" on:click={() => {goto("/logout")}}>Esci</DropdownItem>
+                    </Dropdown>
+                </div>
+            </div>
         {/if}
         <NavHamburger />
     </div>

@@ -16,6 +16,7 @@
             logged={data.user.isAuthenticated}
             username={data.user.username}
             email={data.user.email}
+            balance={data.user.balance}
         >
         </Navbar>
     {/key}
