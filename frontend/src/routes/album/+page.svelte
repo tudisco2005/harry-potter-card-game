@@ -3,8 +3,11 @@
     import { browser } from '$app/environment';
 
     let { data } = $props();
+    let game_cards = data.user.game_cards;
 
-    //game_cards[0].quantity = 900; // For testing purposes, set the first card quantity to 20
+    // each card has is anq quantity
+    let total_cards_counter = game_cards.length;
+    let uniq_card_counter = game_cards.reduce((sum, card) => sum + (card.quantity > 0 ? 1 : 0), 0);
 
     // render cards in batches
     let renderLimit = $state(30); // Limite di rendering iniziale
@@ -49,6 +52,7 @@
 
     onMount(() => {
         lastScrollY = window.scrollY;
+        searchCards();
         window.addEventListener("scroll", onScroll);
     });
 
@@ -403,7 +407,10 @@
         </div>
     </div>
 
-    <hr class="my-4 mx-2 sm:mx-8 border-gray-300 dark:border-gray-600" />
+    <div class="inline-flex items-center justify-center w-full">
+        <hr class="w-full mx-4 h-px my-8 bg-gray-200 border-0 dark:bg-gray-700">
+        <span class="absolute px-3 font-medium text-gray-900 -translate-x-1/2 bg-white left-1/2 dark:text-white dark:bg-gray-900"> {uniq_card_counter} / {total_cards_counter}</span>
+    </div>
 
     <div
         class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"

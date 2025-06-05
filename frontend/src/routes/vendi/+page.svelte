@@ -132,7 +132,7 @@
             >
         </div>
         <div
-            class="relative mx-2 sm:mx-4 border-2 border-gray-700 overflow-x-auto items-center justify-center shadow-md rounded-lg"
+            class="relative mx-1 sm:mx-4 border-2 border-gray-700 overflow-x-auto items-center justify-center shadow-md rounded-lg"
         >
             <table
                 class="w-full text-sm sm:rounded-lg text-left rtl:text-right text-gray-500 dark:text-gray-400"
@@ -162,7 +162,7 @@
                         <th scope="col" class="px-6 py-3 hidden sm:table-cell"
                             >Casa</th
                         >
-                        <th scope="col" class="px-6 py-3">Quantità</th>
+                        <th scope="col" class="px-6 py-3"><p class="hidden md:block">Carte</p> Doppie</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -207,13 +207,19 @@
                                     scope="row"
                                     class="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white"
                                 >
+                                {#if card.image}    
                                     <img
-                                        src={card.image}
-                                        alt={card.name
-                                            ? `Immagine di ${card.name}`
-                                            : "Immagine carta"}
-                                        class="w-12 h-12 object-contain sm:w-16 sm:h-16 md:w-24 md:h-24 hover:scale-105"
-                                    />
+                                            src={card.image}
+                                            alt={card.name
+                                                ? `Immagine di ${card.name}`
+                                                : "Immagine carta"}
+                                            class="w-12 h-12 object-contain sm:w-16 sm:h-16 md:w-24 md:h-24 hover:scale-105"
+                                        />
+                                {:else}
+                                <div class="w-full h-full bg-gray-700 flex items-center justify-center">
+                                    <span class="text-gray-400 text-sm text-wrap">Immagine non disponibile</span>
+                                </div>
+                                {/if}
                                 </th>
                                 <td
                                     class="px-6 py-4"

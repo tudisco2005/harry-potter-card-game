@@ -2,6 +2,7 @@ import { hashPassword, verifyPassword } from '../auth/crypto.js';
 import userModel from '../models/user.js';
 import blacklistSchema from './blacklist.js';
 import { generateToken, verifyToken } from '../auth/auth.js';
+import { generateRandomCards } from '../utils/utils.js';
 
 
 export const createUserController = (mongodb) => {
@@ -685,6 +686,114 @@ export const sellUserCardsController = (mongodb) => {
         } catch (error) {
             console.error("[-] Errore durante la vendita delle carte:", error);
             res.status(500).send({ message: "Errore durante la vendita delle carte" });
+        }
+    }
+}
+
+export const openPackageCardsUserController = (mongodb) => {
+    return async function openPackageCards(req, res) {
+        try {
+            const userId = req.userId;
+            const { quantity } = req.body;
+
+            console.log("[+] Apertura pacchetto carte in corso...");
+
+            // check if the quantity
+            if (!quantity || typeof quantity !== 'number' || quantity <= 0) {
+                console.log("[-] Apertura pacchetto fallita: Quantità non valida");
+                return res.status(400).send({ message: "Quantità non valida" });
+            }
+
+            // Get user info from database
+            const user = await userModel.findOne({ _id: userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+
+            // Check if the user has enough balance to open the package
+            const packageCost = 1; // Example cost for opening a package
+            if (user.balance < packageCost * quantity) {
+                console.log("[-] Apertura pacchetto fallita: Crediti insufficienti");
+                return res.status(400).send({ message: "Crediti insufficienti per aprire il pacchetto" });
+            }
+
+            // Deduct the cost from the user's balance
+            user.balance -= packageCost * quantity;
+
+            // Generate random cards for the package
+            const newCards = generateRandomCards(user.game_cards, 5 * quantity); // Example: 5 random cards
+
+            // Add new cards to the user's game_cards
+            newCards.forEach(card => {
+                const existingCard = user.game_cards.find(c => c.id === card.id);
+                if (existingCard) {
+                    card.quantity += 1; // Update the card quantity in the newCards array
+                    existingCard.quantity = card.quantity; // Increment quantity if card already exists
+                    console.log(`[+] Carta con ID ${card.id} già esistente, quantità aggiornata a ${existingCard.quantity}`);
+                } else {
+                    user.game_cards.push(card); // Add new card if it doesn't exist
+                }
+            });
+
+            // Save updated user information to the database
+            await userModel.updateOne({ _id: userId }, { $set: { game_cards: user.game_cards, balance: user.balance } }).catch((error) => {
+                console.error("[-] Errore durante il salvataggio delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            console.log("[+] Pacchetto carte aperto con successo");
+            res.status(200).send({ message: "Pacchetto carte aperto con successo", newCards, remainingCredits: user.balance });
+        } catch (error) {
+            console.error("[-] Errore durante l'apertura del pacchetto carte:", error);
+            res.status(500).send({ message: "Errore durante l'apertura del pacchetto carte" });
+        }
+    }
+}
+
+export const buyCreditUserController = (mongodb) => {
+    return async function buyCredits(req, res) {
+        try {
+            const userId = req.userId;
+            const { amount } = req.body;
+
+            console.log(`[+] Acquisto di ${amount} crediti...`);
+
+            // check if the quantity
+            if (!amount || typeof amount !== 'number' || amount <= 0) {
+                console.log("[-] Apertura pacchetto fallita: Quantità non valida");
+                return res.status(400).send({ message: "Quantità non valida" });
+            }
+
+            // Get user info from database
+            const user = await userModel.findOne({ _id: userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+
+            // add to the user's balance
+            user.balance += amount;
+
+            // Save updated user information to the database
+            await userModel.updateOne({ _id: userId }, { $set: { balance: user.balance } }).catch((error) => {
+                console.error("[-] Errore durante il salvataggio delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            console.log("[+] Acquisto completato con successo");
+            res.status(200).send({ message: "Acquisto completato con successo", newBalance: user.balance });
+        } catch (error) {
+            console.error("[-] Errore durante l'apertura del pacchetto carte:", error);
+            res.status(500).send({ message: "Errore durante l'apertura del pacchetto carte" });
         }
     }
 }

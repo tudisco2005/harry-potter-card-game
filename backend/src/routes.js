@@ -8,7 +8,9 @@ import {
     updateUserInfoController,
     deleteUserController,
     searchUserCardsController,
-    sellUserCardsController
+    sellUserCardsController,
+    openPackageCardsUserController,
+    buyCreditUserController
 } from "./controllers/user.js";
 import { authenticateUser } from "./auth/auth.js";
 
@@ -25,6 +27,8 @@ export const initRoutes = async (mongodb) => {
     router.delete("/user/delete", await authenticateUser, deleteUserController(mongodb));
     router.get("/user/searchcards", await authenticateUser, searchUserCardsController(mongodb));
     router.post("/user/sellcards", await authenticateUser, sellUserCardsController(mongodb));
+    router.post("/user/openpackage", await authenticateUser, openPackageCardsUserController(mongodb));
+    router.post("/user/credits/purchase", await authenticateUser, buyCreditUserController(mongodb))
 
     return router;
 };
