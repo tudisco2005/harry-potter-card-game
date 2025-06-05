@@ -1,5 +1,5 @@
 import { hashPassword, verifyPassword } from '../auth/crypto.js';
-import userModel from '../models/user.js';
+import { userModel } from '../models/user.js';
 import blacklistSchema from './blacklist.js';
 import { generateToken, verifyToken } from '../auth/auth.js';
 import { generateRandomCards } from '../utils/utils.js';

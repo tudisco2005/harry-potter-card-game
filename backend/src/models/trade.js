@@ -1,18 +1,23 @@
 import mongoose from "mongoose";
+import { gameCardSchema } from "./user.js";
 
 const tradeSchema = new mongoose.Schema({
-    userId: {
+    userIdOffer: {
         type: String,
         required: true,
         trim: true
     },
+    userIdBuyer: {
+        type: String,
+        trim: true
+    },
     offered_cardIds: {
-        type: [String],
+        type: [gameCardSchema],
         required: true,
         trim: true
     },
     requested_cardIds: {
-        type: [String],
+        type: [gameCardSchema],
         required: true,
         trim: true
     },
@@ -24,9 +29,13 @@ const tradeSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
-    }
+    },
+    expirateAt: {
+        type: Date,
+        required: true,
+    },
 });
 
 const Trade = mongoose.model("Trade", tradeSchema);
 
-export default Trade;
+export { Trade };

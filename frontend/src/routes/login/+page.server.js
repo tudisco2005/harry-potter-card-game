@@ -1,9 +1,7 @@
 import { redirect } from '@sveltejs/kit';
 
 export function load({ locals }) {
-    if (!locals.user?.isAuthenticated) {
-        throw redirect(307, '/login');
+    if (locals.user?.isAuthenticated) {
+        throw redirect(307, '/album');
     } 
-
-    throw redirect(307, '/album');
 }
