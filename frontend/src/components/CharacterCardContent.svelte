@@ -1,6 +1,6 @@
 <script>
   export let name = "";
-  export let alternateNames = [];
+  export let alternate_names = [];
   export let species = "";
   export let gender = "";
   export let house = "";
@@ -59,11 +59,6 @@
     return `${day} ${months[parseInt(month) - 1]} ${year}`;
   }
 
-  // Funzione per ottenere il primo nome alternativo
-  function getPrimaryAlternateName(names) {
-    return names && names.length > 0 ? names[0] : "";
-  }
-
   // Funzione per formattare le informazioni della bacchetta
   function formatWandInfo(wandData) {
     if (!wandData || !wandData.wood) return "Bacchetta Sconosciuta";
@@ -82,7 +77,6 @@
   // Reattive declarations
   $: houseColors = getHouseColors(house);
   $: formattedDate = formatDate(dateOfBirth);
-  $: primaryAlternateName = getPrimaryAlternateName(alternateNames);
   $: wandInfo = formatWandInfo(wand);
   $: isAlive = alive;
 </script>
@@ -107,11 +101,10 @@
         <h1 class="text-2xl font-bold {houseColors.text} tracking-wide drop-shadow-lg relative z-10">
           {name}
         </h1>
-        {#if primaryAlternateName}
-          <p class="text-sm text-yellow-200 italic mt-1 opacity-90 relative z-10">
-            {primaryAlternateName}
+
+          <p class="text-sm text-yellow-200 -mb-3 italic mt-0.5 opacity-90 relative z-10">
+            {alternate_names[0] ? alternate_names[0]: "\u{200D}"}
           </p>
-        {/if}
       </div>
 
       <!-- Immagine del personaggio -->
@@ -258,19 +251,6 @@
           </div>
         </div>
 
-        <!-- Nomi alternativi -->
-        {#if alternateNames.length > 1}
-          <div class="bg-blue-900/20 rounded-lg p-3 border border-yellow-400/30">
-            <div class="text-xs text-yellow-400 font-semibold uppercase text-center mb-2 tracking-wide">
-              Altri Nomi
-            </div>
-            <div class="space-y-1">
-              {#each alternateNames.slice(1) as altName}
-                <div class="text-xs text-amber-100 italic text-center opacity-90">"{altName}"</div>
-              {/each}
-            </div>
-          </div>
-        {/if}
 
         <!-- Status -->
         <div class="flex justify-between items-center pt-3 border-t border-yellow-400/30">

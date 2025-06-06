@@ -120,12 +120,13 @@
 {#if openPackageModal}
     <!-- Backdrop del modale -->
     <div
-        class="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center p-4"
+        class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4"
         on:click={() => (openPackageModal = false)}
     >
-        <!-- Contenitore del modale -->
+        <!-- Contenitore del modale con stopPropagation per evitare la chiusura al click interno -->
         <div
             class="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-xl dark:bg-gray-800 overflow-hidden"
+            on:click|stopPropagation
         >
             <!-- Header del modale -->
             <div
@@ -186,11 +187,6 @@
             </div>
         </div>
     </div>
-
-    <div
-        class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
-        on:click={() => (openPackageModal = false)}
-    ></div>
 {/if}
 {#if buyCreditModal}
     <div class="absolute md:w-10/12 max-w-full h-full md:h-auto z-50">
