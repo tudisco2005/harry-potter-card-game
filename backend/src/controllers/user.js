@@ -470,7 +470,12 @@ export const searchUserCardsController = () => {
             });
 
             // Validate input
-            if ((sortBy == "attribute" && sortByAttributeName != null) || !sortBy) {
+            if(sortBy == null || sortBy.trim() === "") {
+                console.log("[-] Ricerca fallita: Tipo di ordinamento mancante");
+                return res.status(400).send({ message: "Tipo di ordinamento mancante" });
+            }
+
+            if (sortBy == "attribute" && (sortByAttributeName == null || sortByAttributeName.trim() === "")) {
                 console.log("[-] Ricerca fallita: Campi mancanti nella ricerca");
                 return res.status(400).send({ message: "Non sono presenti tutti i campi per la ricerca" });
             }

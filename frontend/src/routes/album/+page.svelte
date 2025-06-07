@@ -66,7 +66,7 @@
     let game_cards_filtered = $state(data.user.game_cards);
     let sortingModal = $state(false);
     let sortBy = $state("quantity");
-    let sortByAttributeName = $state("name");
+    let sortByAttributeName = $state("species");
 
     let attributes = [
         "species",
@@ -215,7 +215,7 @@
                                 id="sort-order"
                                 class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                                 bind:value={sortByAttributeName}
-                                on:change={searchCards}
+                                on:click={searchCards}
                             >
                                 {#each attributes as attribute}
                                     <option value={attribute}

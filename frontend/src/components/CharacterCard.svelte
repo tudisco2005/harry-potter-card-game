@@ -14,7 +14,7 @@
     Applica effetti visivi in base allo stato della carta
 -->
 <div
-    class:grayscale={!requested && quantity == 0}  // Rende la carta in scala di grigi se non richiesta e non posseduta
+    class:grayscale={!requested && quantity == 0} 
     class="relative {quantity == 0
         ? 'opacity-50 '  // Riduce l'opacità se non posseduta
         : ''}"
