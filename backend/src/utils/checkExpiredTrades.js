@@ -30,7 +30,7 @@ export const checkExpiredTrades = async (req, res, next) => {
         );
         next();
     } catch (error) {
-        console.error('Error checking expired trades:', error);
+        console.error('Errore durante il controllo degli scambi scaduti:', error);
         next(); // Continua anche se c'è un errore per non bloccare l'applicazione
     }
 };

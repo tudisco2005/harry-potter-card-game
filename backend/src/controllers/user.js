@@ -45,12 +45,19 @@ import { generateRandomCards } from '../utils/utils.js';
  *     responses:
  *       201:
  *         description: Utente registrato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       400:
  *         description: Dati non validi o mancanti
  *       500:
  *         description: Errore del server
  */
-export const createUserController = (mongodb) => {
+export const createUserController = () => {
     return async function registerUser(req, res) {
         const { username, email, favouriteWizard, password, confirmPassword } = req.body;
 
@@ -185,7 +192,7 @@ export const createUserController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const loginUserController = (mongodb) => {
+export const loginUserController = () => {
     return async function loginUser(req, res) {
         const { username, password } = req.body;
 
@@ -241,7 +248,8 @@ export const loginUserController = (mongodb) => {
     }
 };
 
-export const logoutUserController = (mongodb) => {
+
+export const logoutUserController = () => {
     return async function logoutUser(req, res) {
         try {
             const decoded = await blacklistModel.create({ tokenId: req.token });
@@ -282,6 +290,8 @@ export const logoutUserController = (mongodb) => {
  *             schema:
  *               type: object
  *               properties:
+ *                 message:
+ *                   type: string
  *                 valid:
  *                   type: boolean
  *       401:
@@ -289,7 +299,7 @@ export const logoutUserController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const tokenStatusUserController = (mongodb) => {
+export const tokenStatusUserController = () => {
     return async function tokenStatus(req, res) {
         try {
             // verify jwt
@@ -353,7 +363,7 @@ export const tokenStatusUserController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const getUserInfoController = (mongodb) => {
+export const getUserInfoController = () => {
     return async function getUserInfo(req, res) {
         try {
             // Get user info from database
@@ -436,7 +446,7 @@ export const getUserInfoController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const searchUserCardsController = (mongodb) => {
+export const searchUserCardsController = () => {
     return async function searchUserCards(req, res) {
         try {
             // Get user info from database
@@ -742,7 +752,7 @@ export const searchUserCardsController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const getUserMissingCardsController = (mongodb) => {
+export const getUserMissingCardsController = () => {
     return async function getUserMissingCards(req, res) {
         try {
             // Get user info from database
@@ -827,7 +837,7 @@ export const getUserMissingCardsController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const getUserDoubleCardsController = (mongodb) => {
+export const getUserDoubleCardsController = () => {
     return async function getUserDoubleCards(req, res) {
         try {
             // Get user info from database
@@ -902,12 +912,19 @@ export const getUserDoubleCardsController = (mongodb) => {
  *     responses:
  *       200:
  *         description: Informazioni utente aggiornate con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Utente non trovato
  *       500:
  *         description: Errore del server
  */
-export const updateUserInfoController = (mongodb) => {
+export const updateUserInfoController = () => {
     return async function updateUserInfo(req, res) {
         try {
             // Get user info from database
@@ -979,12 +996,19 @@ export const updateUserInfoController = (mongodb) => {
  *     responses:
  *       200:
  *         description: Utente eliminato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       404:
  *         description: Utente non trovato
  *       500:
  *         description: Errore del server
  */
-export const deleteUserController = (mongodb) => {
+export const deleteUserController = () => {
     return async function deleteUser(req, res) {
         try {
             // Get user info from database
@@ -1077,7 +1101,7 @@ export const deleteUserController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const sellUserCardsController = (mongodb) => {
+export const sellUserCardsController = () => {
     return async function sellUserCards(req, res) {
         try {
             const userId = req.userId;
@@ -1176,7 +1200,7 @@ export const sellUserCardsController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const openPackageCardsUserController = (mongodb) => {
+export const openPackageCardsUserController = () => {
     return async function openPackageCards(req, res) {
         try {
             const userId = req.userId;
@@ -1282,7 +1306,7 @@ export const openPackageCardsUserController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const buyCreditUserController = (mongodb) => {
+export const buyCreditUserController = () => {
     return async function buyCredits(req, res) {
         try {
             const userId = req.userId;
@@ -1368,7 +1392,7 @@ export const buyCreditUserController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const getUserAllTrades = (mongodb) => {
+export const getUserAllTrades = () => {
     return async function getUserTrades(req, res) {
         try {
             console.log("[+] Recupero scambi proposti dell'utente in corso...");

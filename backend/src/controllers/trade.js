@@ -63,7 +63,7 @@ import { tradeModel } from '../models/trade.js';
  *       500:
  *         description: Errore del server
  */
-export const createTradeController = (mongodb) => {
+export const createTradeController = () => {
     return async function createTrade(req, res) {
         let userId = req.userId;
         
@@ -139,28 +139,37 @@ export const createTradeController = (mongodb) => {
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   _id:
- *                     type: string
- *                   userIdOffer:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 trades:
+ *                   type: array
+ *                   items:
  *                     type: object
  *                     properties:
- *                       username:
+ *                       _id:
  *                         type: string
- *                   offered_cardIds:
- *                     type: array
- *                   requested_cardIds:
- *                     type: array
- *                   expirateAt:
- *                     type: string
- *                     format: date-time
+ *                       userIdOffer:
+ *                         type: object
+ *                         properties:
+ *                           username:
+ *                             type: string
+ *                       offered_cardIds:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       requested_cardIds:
+ *                         type: array
+ *                         items:
+ *                           type: string
+ *                       expirateAt:
+ *                         type: string
+ *                         format: date-time
  *       500:
  *         description: Errore del server
  */
-export const getAllTradesController = (mongodb) => {
+export const getAllTradesController = () => {
     return async function getAllTrades(req, res) {
         console.log("[-] Recupero tutti gli scambi in corso tranne i completati o cancellati");
         
@@ -241,6 +250,13 @@ export const getAllTradesController = (mongodb) => {
  *     responses:
  *       200:
  *         description: Scambio accettato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       400:
  *         description: Dati non validi o mancanti
  *       403:
@@ -250,7 +266,7 @@ export const getAllTradesController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const acceptTradeController = (mongodb) => {
+export const acceptTradeController = () => {
     return async function acceptTrade(req, res) {
         const { tradeId } = req.body;
         const userId = req.userId;
@@ -380,6 +396,13 @@ export const acceptTradeController = (mongodb) => {
  *     responses:
  *       200:
  *         description: Scambio eliminato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
  *       403:
  *         description: Non autorizzato ad eliminare questo scambio
  *       404:
@@ -387,7 +410,7 @@ export const acceptTradeController = (mongodb) => {
  *       500:
  *         description: Errore del server
  */
-export const deleteTradeController = (mongodb) => {
+export const deleteTradeController = () => {
     return async function deleteTrade(req, res) {
         try {
             // Recupera le informazioni dell'utente dal database

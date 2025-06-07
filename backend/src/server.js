@@ -31,7 +31,7 @@ const mongodb = await connectDB(
 // ==========================================
 
 // Inizializzazione dell'applicazione Express con la connessione MongoDB
-const app = await initApp(mongodb);
+const app = await initApp();
 
 // Creazione del server HTTP utilizzando l'app Express
 const server = http.createServer(app);

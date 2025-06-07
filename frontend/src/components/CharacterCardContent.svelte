@@ -1,26 +1,31 @@
 <script>
-  export let name = "";
-  export let alternate_names = [];
-  export let species = "";
-  export let gender = "";
-  export let house = "";
-  export let dateOfBirth = "";
+  // Props del componente per i dettagli del personaggio
+  export let name = "";              // Nome del personaggio
+  export let alternate_names = [];   // Nomi alternativi
+  export let species = "";           // Specie
+  export let gender = "";            // Genere
+  export let house = "";             // Casa di Hogwarts
+  export let dateOfBirth = "";       // Data di nascita
   // export let yearOfBirth = null;
-  export let wizard = false;
-  export let ancestry = "";
-  export let eyeColour = "";
-  export let hairColour = "";
-  export let wand = { wood: "", core: "", length: null };
-  export let patronus = "";
-  export let hogwartsStudent = false;
-  export let hogwartsStaff = false;
-  export let actor = "";
+  export let wizard = false;         
+  export let ancestry = "";          
+  export let eyeColour = "";         
+  export let hairColour = "";        
+  export let wand = { wood: "", core: "", length: null };  
+  export let patronus = "";          
+  export let hogwartsStudent = false;  
+  export let hogwartsStaff = false;   
+  export let actor = "";             
   // export let alternateActors = [];
-  export let alive = true;
-  export let image = "";
-  export let flipDisabled = false;
+  export let alive = true;           
+  export let image = "";             
+  export let flipDisabled = false;   // Se il ribaltamento della carta è disabilitato
 
-  // Funzione per ottenere i colori della casa
+  /**
+   * Restituisce i colori associati alla casa di Hogwarts
+   * @param {string} houseName - Nome della casa
+   * @returns {Object} - Oggetto con i colori della casa
+   */
   function getHouseColors(houseName) {
     const houses = {
       "Gryffindor": {
@@ -51,7 +56,11 @@
     return houses[houseName] || houses["Gryffindor"];
   }
 
-  // Funzione per formattare la data
+  /**
+   * Formatta la data in formato italiano
+   * @param {string} dateString - Data in formato DD-MM-YYYY
+   * @returns {string} - Data formattata
+   */
   function formatDate(dateString) {
     if (!dateString) return "";
     const [day, month, year] = dateString.split("-");
@@ -60,7 +69,11 @@
     return `${day} ${months[parseInt(month) - 1]} ${year}`;
   }
 
-  // Funzione per formattare le informazioni della bacchetta
+  /**
+   * Formatta le informazioni della bacchetta
+   * @param {Object} wandData - Dati della bacchetta
+   * @returns {Object} - Informazioni formattate della bacchetta
+   */
   function formatWandInfo(wandData) {
     if (!wandData || !wandData.wood) return "Bacchetta Sconosciuta";
     const length = wandData.length ? `${wandData.length} cm` : "";
@@ -71,12 +84,15 @@
   // Stato per la rotazione della carta
   let isFlipped = false;
 
+  /**
+   * Gestisce il ribaltamento della carta
+   */
   function flipCard() {
     if (flipDisabled) return; // Non permette il flip se disabilitato
     isFlipped = !isFlipped;
   }
 
-  // Reattive declarations
+  // Dichiarazioni reattive per i valori calcolati
   $: houseColors = getHouseColors(house);
   $: formattedDate = formatDate(dateOfBirth);
   $: wandInfo = formatWandInfo(wand);

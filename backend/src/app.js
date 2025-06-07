@@ -6,14 +6,14 @@ import swaggerSpec from "./utils/swagger.js";
 
 const app = express();
 
-// Middleware configuration
+// Configurazione middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
 
-export const initApp = async (mongodb) => {
+export const initApp = async () => {
     app.use("/api-docs", swaggerUI.serve, swaggerUI.setup(swaggerSpec));
-    app.use("/api", await initRoutes(mongodb));
+    app.use("/api", await initRoutes());
     return app;
 };
 
