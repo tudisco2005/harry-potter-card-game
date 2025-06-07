@@ -1181,6 +1181,18 @@ export const sellUserCardsController = () => {
  *     description: Apre un nuovo pacchetto di carte e aggiunge le carte alla collezione dell'utente
  *     security:
  *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - quantity
+ *             properties:
+ *               quantity:
+ *                 type: number
+ *                 description: Numero di pacchetti da aprire
  *     responses:
  *       200:
  *         description: Pacchetto aperto con successo
@@ -1195,8 +1207,12 @@ export const sellUserCardsController = () => {
  *                   type: array
  *                   items:
  *                     type: object
+ *                 remainingCredits:
+ *                   type: number
  *       400:
- *         description: Crediti insufficienti
+ *         description: Crediti insufficienti o quantità non valida
+ *       404:
+ *         description: Utente non trovato
  *       500:
  *         description: Errore del server
  */
