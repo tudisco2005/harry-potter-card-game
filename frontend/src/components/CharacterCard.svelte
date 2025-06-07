@@ -4,20 +4,24 @@
     export let flipDisabled = false;
     export let content;
     export let quantity = 1;
+    export let requested = false;
+
+
 </script>
 
 <div
+    class:grayscale={!requested && quantity == 0}
     class="relative {quantity == 0
-        ? 'opacity-50 grayscale'
+        ? 'opacity-50 '
         : ''}"
 >
-    {#if quantity == 0}
+    {#if quantity == 0 || requested}
         <!-- Tag che copre sicuramente tutta la diagonale -->
         <div class="absolute inset-0 z-10 pointer-events-none">
             <div
                 class="absolute rounded-xl top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white text-lg font-bold w-80 h-12 flex items-center justify-center transform rotate-45 shadow-xl"
             >
-                MANCANTE
+                {requested ? 'Richiesta gia in corso...' : 'MANCANTE'}
             </div>
         </div>
     {:else if quantity > 1}

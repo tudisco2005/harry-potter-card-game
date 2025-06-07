@@ -3,15 +3,18 @@
     export let offeredCardsClick;
     export let askCardsClick;
     export let acceptTradeClick;
+    export let tradeId;
 
     export let offeredCards;
     export let askCards;
 
     export let expireTime;
-    export let rating;
+    export let rating = "";
     export let username;
     export let userInitials;
-    export let completedTrades;
+    export let completedTrades = "";
+    export let cancelled = false;
+    export let textButton = "Accetta scambio"
 
     function formatExpireTime(expireTime) {
         const now = new Date();
@@ -62,7 +65,9 @@
                         </div> -->
             <div>
                 <div class="text-white font-semibold">{username}</div>
-                <div class="text-sm text-gray-400">⭐ {rating} ({completedTrades} scambi)</div>
+                {#if rating}
+                    <div class="text-sm text-gray-400">⭐ {rating} ({completedTrades} scambi)</div>
+                {/if}
             </div>
         </div>
         <div class="text-right">
@@ -77,7 +82,7 @@
                     new Date(expireTime) - new Date() >= 24 * 60 * 60 * 1000
                 }
             >
-                {formatExpireTime(expireTime)}
+                {cancelled ? "cancellato" : formatExpireTime(expireTime)}
             </div>
         </div>
     </div>
@@ -117,24 +122,29 @@
 
     <div class="flex items-center justify-between">
         <div class="flex items-center space-x-2">
-            <span
+            <!-- <span
                 class="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-1 rounded-full"
                 >HOT</span
-            >
+            > -->
+            {#if completedTrades < 10}
             <span
                 class="text-xs bg-green-500/20 text-green-400 px-2 py-1 rounded-full"
                 >Nuovo utente</span
             >
-            <span
-                class="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full"
-                >URGENTE</span
-            >
+            {/if}
+            {#if new Date(expireTime) - new Date() < 24 * 60 * 60 * 1000 && (new Date(expireTime) - new Date()) > 0}
+                <span
+                    class="text-xs bg-red-500/20 text-red-400 px-2 py-1 rounded-full"
+                    >URGENTE</span
+                >
+            {/if}
         </div>
         <button
+        disabled={(new Date(expireTime) - new Date()) < 0 || cancelled}
         on:click = {acceptTradeClick}
-            class="bg-gradient-to-r from-purple-600 to-blue-600 text-white px-4 py-2 rounded-lg font-semibold hover:from-purple-700 hover:to-blue-700 transition-all transform hover:scale-105"
+            class="bg-gradient-to-r {(new Date(expireTime) - new Date()) < 0 || cancelled ? "bg-gray-800" : "from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 hover:scale-105"}  text-white px-4 py-2 rounded-lg font-semibold transition-all transform"
         >
-            Accetta Scambio
+            {(new Date(expireTime) - new Date()) < 0 ? "Scambio scaduto" : cancelled ? "Scambio cancellato": textButton}
         </button>
     </div>
 </div>

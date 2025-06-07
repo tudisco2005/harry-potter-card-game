@@ -23,7 +23,7 @@ const tradeSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["open", "completed", "cancelled"],
+        enum: ["open", "completed", "cancelled", "expired"],
         default: "open"
     },
     createdAt: {
@@ -35,6 +35,37 @@ const tradeSchema = new mongoose.Schema({
         required: true,
     },
 });
+
+// Middleware automatico per tutte le query
+tradeSchema.pre(['find', 'findOne', 'findOneAndUpdate'], async function() {
+    const now = new Date();
+    await this.model.updateMany(
+        { status: "open", expirateAt: { $lte: now } },
+        { $set: { status: "expired" } }
+    );
+});
+
+// Metodi helper
+tradeSchema.methods.isExpired = function() {
+    return this.expirateAt <= new Date();
+};
+
+tradeSchema.methods.checkAndExpire = async function() {
+    if (this.status === 'open' && this.isExpired()) {
+        this.status = 'expired';
+        await this.save();
+        return true;
+    }
+    return false;
+};
+
+tradeSchema.statics.updateExpired = function() {
+    const now = new Date();
+    return this.updateMany(
+        { status: "open", expirateAt: { $lte: now } },
+        { $set: { status: "expired" } }
+    );
+};
 
 const tradeModel = mongoose.model("Trade", tradeSchema);
 

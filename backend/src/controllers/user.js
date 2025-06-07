@@ -1,6 +1,7 @@
 import { hashPassword, verifyPassword } from '../auth/crypto.js';
 import { userModel } from '../models/user.js';
-import blacklistSchema from './blacklist.js';
+import { tradeModel } from '../models/trade.js';
+import blacklistModel from '../models/blacklist.js';
 import { generateToken, verifyToken } from '../auth/auth.js';
 import { generateRandomCards } from '../utils/utils.js';
 
@@ -154,7 +155,7 @@ export const loginUserController = (mongodb) => {
 export const logoutUserController = (mongodb) => {
     return async function logoutUser(req, res) {
         try {
-            const decoded = await blacklistSchema.create({ tokenId: req.token });
+            const decoded = await blacklistModel.create({ tokenId: req.token });
             if (!decoded) {
                 console.error("[-] Errore durante la creazione della blacklist:", error);
                 return res.status(500).send({ message: "Errore durante il logout" });
@@ -506,12 +507,7 @@ export const searchUserCardsController = (mongodb) => {
                 return res.status(500).send({ message: "Errore durante l'ordinamento delle carte" });
             }
 
-            console.log("[+] Carte filtrate e ordinate con successo:", {
-                searchQuery,
-                sortBy,
-                sortByAttributeName,
-                filteredCardsCount: filteredCards.length
-            });
+            console.log(`[+] Carte filtrate e ordinate con successo: query="${searchQuery}" - sortBy=${sortBy} - sortByAttributeName=${sortByAttributeName} - CardsCount=${filteredCards.length}`);
 
             // Send response with filtered and sorted cards
             res.status(200).send({
@@ -538,13 +534,39 @@ export const getUserMissingCardsController = (mongodb) => {
                 console.log("[-] Utente non trovato");
                 return res.status(404).send({ message: "Utente non trovato" });
             }
+            
             // Get all cards from the database
-            const missingCards = user.game_cards.filter(card => card.quantity === 0);
+            let missingCards = user.game_cards.filter(card => card.quantity === 0);
             if (missingCards.length === 0) {
                 console.log("[-] Nessuna carta mancante trovata per l'utente:", user.username);
                 missingCards = []; // Ensure missingCards is an empty array if no cards are missing
             }
             
+            //fetch user trade that are open and not expired
+            const userTrades = user.trades || [];
+            console.log("[-] Recupero trades in corso per l'utente:", user.username);
+            const trades = await tradeModel.find({ _id: { $in: userTrades }, status: 'open' }).catch((error) => {
+                console.error("[-] Errore durante il recupero dei trades:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            if (trades && trades.length > 0) {
+                // Transform missingCards array and add alreadyRequested property
+                missingCards = missingCards.map(card => {
+                    const cardObj = card.toObject(); // Convert Mongoose document to plain object
+                    cardObj.alreadyRequested = trades.some(trade => 
+                        trade.requested_cardIds.some(requestedCard => requestedCard.id === cardObj.id)
+                    );
+                    if (cardObj.alreadyRequested) {
+                        console.log("[-] Carta già richiesta in uno scambio:", cardObj.name);
+                    }
+                    return cardObj;
+                });
+            } else {
+                // Convert to plain objects even if no trades exist
+                missingCards = missingCards.map(card => card.toObject());
+            }
+
             console.log("[+] Carte mancanti recuperate con successo:", missingCards.length);
 
             // Send response with missing cards
@@ -573,10 +595,51 @@ export const getUserDoubleCardsController = (mongodb) => {
                 return res.status(404).send({ message: "Utente non trovato" });
             }
             // Get all cards from the database
-            const doubleCards = user.game_cards.filter(card => card.quantity > 1);
+            let doubleCards = user.game_cards.filter(card => card.quantity > 1);
             if (doubleCards.length === 0) {
                 console.log("[-] Nessuna carta doppia trovata per l'utente:", user.username);
                 return res.status(200).send({ message: "Nessuna carta doppia trovata", doubleCards: [] });
+            }
+
+            // remove 1 quantity from card that are alredy in trade offer as offered cards if the modify quantity is 0 remove from the array
+            const tradeIds = user.trades || [];
+            console.log("[-] Recupero trades in corso per l'utente:", user.username);
+            const trades = await tradeModel.find({ _id: { $in: tradeIds } }).catch((error) => {
+                console.error("[-] Errore durante il recupero dei trades:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            if (trades && trades.length > 0) {
+                // filter only trades that are open and not expired
+                const openTrades = trades.filter(trade => {
+                    const currentTime = new Date();
+                    return  trade.status === 'open';
+                });
+
+                let filteredDoubleCards = [...doubleCards];
+
+                openTrades.forEach(trade => {
+                    trade.offered_cardIds.forEach(offeredCard => {
+                        const card = doubleCards.find(c => c.id === offeredCard.id);
+                        if (card) {
+                            card.quantity -= 1;
+                            if (card.quantity <= 0) {
+                                filteredDoubleCards = filteredDoubleCards.filter(c => c.id !== card.id);
+                                console.log("[-] Carta rimossa dalle carte doppie perché gia richiesta in uno scambio:", card.name);
+                            }
+                        }
+                    });
+                });
+
+                if (filteredDoubleCards.length === 0) {
+                    console.log("[-] Nessuna carta doppia disponibile per l'utente dopo filtraggio:", user.username);
+                    return res.status(200).send({ message: "Nessuna carta doppia disponibile", doubleCards: [] });
+                }
+                console.log("[+] Carte doppie filtrate in base agli scambi aperti:", filteredDoubleCards.length);
+                // Update doubleCards to the filtered ones
+                doubleCards = filteredDoubleCards;
+            } else {
+                console.log("[-] Nessun trade aperto trovato per l'utente:", user.username);
             }
 
             console.log("[+] Carte doppie recuperate con successo:", doubleCards.length);
@@ -672,7 +735,7 @@ export const deleteUserController = (mongodb) => {
             });
 
             // blacklist token
-            const blacklistedToken = await blacklistSchema.create({ tokenId: req.token });
+            const blacklistedToken = await blacklistModel.create({ tokenId: req.token });
             if (!blacklistedToken) {
                 console.error("[-] Errore durante la blacklist del token dell'utente eliminato");
                 return res.status(500).send({ message: "Errore durante il logout" });
@@ -863,6 +926,65 @@ export const buyCreditUserController = (mongodb) => {
         } catch (error) {
             console.error("[-] Errore durante l'apertura del pacchetto carte:", error);
             res.status(500).send({ message: "Errore durante l'apertura del pacchetto carte" });
+        }
+    }
+}
+
+export const getUserAllTrades = (mongodb) => {
+    return async function getUserTrades(req, res) {
+        try {
+            console.log("[+] Recupero scambi proposti dell'utente in corso...");
+
+            // Recupera le informazioni dell'utente dal database
+            const user = await userModel.findOne({ _id: req.userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero dell'utente:", error);
+                throw error; // Rilancia l'errore invece di inviare la risposta qui
+            });
+
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+
+            // Controlla se l'utente ha trades (correggi il controllo)
+            if (!user.trades || user.trades.length === 0) {
+                console.log("[+] L'utente non ha mai proposto uno scambio");
+                return res.status(200).send({ 
+                    message: "Scambi proposti dell'utente recuperati con successo", 
+                    trades: [] 
+                });
+            }
+
+            // SOLUZIONE 1: Usa Promise.all per gestire le operazioni asincrone in parallelo
+            console.log("[+] Recupero dettagli degli scambi...");
+            
+            const tradePromises = user.trades.map(async (tradeId) => {
+                try {
+                    // Usa findById invece di find per un singolo documento
+                    const trade = await tradeModel.findById(tradeId);
+                    return trade;
+                } catch (error) {
+                    console.error(`[-] Errore durante il recupero dello scambio ${tradeId}:`, error);
+                    return null; // Restituisce null per gli scambi non trovati
+                }
+            });
+
+            // Attende che tutte le Promise si risolvano
+            const userTrades = await Promise.all(tradePromises);
+            
+            // Filtra i risultati null (scambi non trovati o con errori)
+            const validTrades = userTrades.filter(trade => trade !== null);
+            validTrades.sort((a, b) => new Date(b.expirateAt) - new Date(a.expirateAt)); // ordinamento per data di scadenza: quello che scade prima appare più in alto
+
+            console.log("[+] Scambi proposti recuperati con successo:", validTrades.length);
+            res.status(200).send({ 
+                message: "Scambi proposti dell'utente recuperati con successo", 
+                trades: validTrades 
+            });
+
+        } catch (error) {
+            console.error("[-] Errore durante il recupero degli scambi proposti dell'utente:", error);
+            res.status(500).send({ message: "Errore durante il recupero degli scambi dell'utente" });
         }
     }
 }

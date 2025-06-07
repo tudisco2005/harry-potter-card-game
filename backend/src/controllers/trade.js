@@ -63,7 +63,6 @@ export const createTradeController = (mongodb) => {
 
 export const getAllTradesController = (mongodb) => {
     return async function getAllTrades(req, res) {
-        const userId = req.userId;
         console.log("[-] Recupero tutti i trades in corso tranne i completati o cancellati");
         
         try {
@@ -123,54 +122,96 @@ export const acceptTradeController = (mongodb) => {
         const { tradeId } = req.body;
         const userId = req.userId;
 
-        console.log("[-] Accettazione trade in corso:", tradeId);
+        console.log("[-] Accettazione Scambio in corso:", tradeId);
 
         try {
             const trade = await tradeModel.findOne({ _id: tradeId, userIdOffer: { $ne: userId }, status: "open" });
 
             if (!trade) {
-                console.log("[-] Trade non trovato o non autorizzato");
-                return res.status(404).send({ message: "Trade non trovato o non autorizzato" });
+                console.log("[-] Trade non trovato o cancellato");
+                return res.status(404).send({ message: "Trade non trovato o cancellato" });
             }
 
-            trade.status = "completed";
-            await trade.save();
 
             // modifica le carte degli utenti coinvolti
-            const userOffer = await userModel.findById(trade.userIdOffer);
-            const userBuyer = await userModel.findById(userId);
+            const userOffer = await userModel.findOne({ _id: trade.userIdOffer });
+            const userBuyer = await userModel.findOne({ _id: userId });
 
-            if (!userOffer || !userBuyer) {
-                console.log("[-] Utente offerente o compratore non trovato");
+            if(!userOffer) {
+                console.log("[-] Utente offerente non trovato");
                 return res.status(404).send({ message: "Utente offerente o compratore non trovato" });
             }
 
+            if (!userBuyer) {
+                console.log("[-] Utente compratore non trovato");
+                return res.status(404).send({ message: "Utente offerente o compratore non trovato" });
+            }
+
+
             // Rimuovi le carte offerte dall'utente offerente modificando la quantità posseduta
             for (const card of trade.offered_cardIds) {
-                const existingCard = userOffer.cards.find(c => c.cardId === card.cardId);
+                const existingCard = userOffer.game_cards.find(c => c.id === card.id);
                 if (existingCard) {
-                    if (existingCard.quantity <= card.quantity) {
-                        console.log("[-] Quantità insufficiente per la carta:", card.cardId);
-                        return res.status(400).send({ message: "Quantità offerta insufficiente per la carta: " + card.cardId });
+                    if (existingCard.quantity < card.quantity) {
+                        console.log("[-] Quantità insufficiente per la carta:", card.id);
+                        return res.status(400).send({ message: "Quantità offerta insufficiente per la carta: " + card.id });
                     }
+                    console.log("[-] Offerente: Rimuovo carta offerta:", card.id, "Quantità:", card.quantity);
                     existingCard.quantity -= card.quantity;
+                } else {
+                    console.log("[-] Carta offerta non trovata:", card.id);
+                    return res.status(404).send({ message: "Carta offerta non trovata: " + card.id });
                 }
             }
 
-            // Aggiungi le carte richieste all'utente compratore modificanto la quantità posseduta
+            // Rimuovi le carte richieste dall'utente compratore modificando la quantità posseduta
             for (const card of trade.requested_cardIds) {
-                const existingCard = userBuyer.cards.find(c => c.cardId === card.cardId);
+                const existingCard = userBuyer.game_cards.find(c => c.id === card.id);
                 if (existingCard) {
-                    existingCard.quantity += card.quantity;
+                    if (existingCard.quantity < card.quantity) {
+                        console.log("[-] Quantità insufficiente per la carta richiesta:", card.id);
+                        return res.status(400).send({ message: "Quantità insufficiente per la carta richiesta: " + card.id });
+                    }
+                    console.log("[-] Compratore: Rimuovo carta richiesta:", card.id, "Quantità:", card.quantity);
+                    existingCard.quantity -= card.quantity;
                 } else {
-                    userBuyer.cards.push(card);
+                    console.log("[-] Carta richiesta non trovata:", card.id);
+                    return res.status(404).send({ message: "Carta richiesta non trovata: " + card.id });
                 }
             }
+
+            // Aggiungi le carte offerte all'utente compratore modificando la quantità posseduta
+            for (const card of trade.offered_cardIds) {
+                const existingCard = userBuyer.game_cards.find(c => c.id === card.id);
+                if (existingCard) {
+                    console.log("[-] Compratore: Aggiungo carta offerta:", card.id, "Quantità:", card.quantity);
+                    existingCard.quantity += card.quantity;
+                } else {
+                    console.log("[-] Carta offerta non trovata per l'utente compratore:", card.id);
+                    return res.status(404).send({ message: "Carta offerta non trovata per l'utente compratore: " + card.id });
+                }
+            }
+
+            // Aggiungi le carte richieste all'utente offerente modificando la quantità posseduta
+            for (const card of trade.requested_cardIds) {
+                const existingCard = userOffer.game_cards.find(c => c.id === card.id);
+                if (existingCard) {
+                    console.log("[-] Offerente: Aggiungo carta richiesta:", card.id, "Quantità:", card.quantity);
+                    existingCard.quantity += card.quantity;
+                } else {
+                    console.log("[-] Carta richiesta non trovata per l'utente offerente:", card.id);
+                    return res.status(404).send({ message: "Carta richiesta non trovata per l'utente offerente: " + card.id });
+                }
+            }
+            // Salva le modifiche agli utenti
+            trade.userIdBuyer = userId;
+            trade.status = "completed";
 
             await userOffer.save();
             await userBuyer.save();
+            await trade.save();
 
-            console.log("[-] Trade accettato con successo:", tradeId);
+            console.log("[-] Scambio accettato con successo:", tradeId);
             return res.status(200).send({ message: "Trade accettato con successo", trade });
         } catch (error) {
             console.error("[-] Errore durante l'accettazione del trade:", error);
@@ -179,4 +220,45 @@ export const acceptTradeController = (mongodb) => {
     }
 
     return { acceptTrade };
+}
+
+export const deleteTradeController = (mongodb) => {
+    return async function deleteTrade(req, res) {
+        try {
+            // Recupera le informazioni dell'utente dal database
+            const user = await userModel.findOne({ _id: req.userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero dell'utente:", error);
+                throw error; // Rilancia l'errore invece di inviare la risposta qui
+            });
+
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+
+            //controlla se il trade è dell utente
+            const { tradeId } = req.body;
+            const trade = await tradeModel.findOne({ _id: tradeId });
+
+            if (!trade) {
+                console.log("[-] Trade non trovato");
+                return res.status(404).send({ message: "Trade non trovato" });
+            }
+
+            if (trade.userIdOffer.toString() !== req.userId) {
+                console.log("[-] L'utente non è autorizzato a cancellare questo trade");
+                return res.status(403).send({ message: "Non sei autorizzato a cancellare questo trade" });
+            }
+
+            // Cancella il trade impostando lo status su "cancelled"
+            trade.status = "cancelled";
+            await trade.save();
+
+            console.log("[-] Trade cancellato con successo:", tradeId);
+            return res.status(200).send({ message: "Trade cancellato con successo" });
+        } catch (error) {
+            console.error("[-] Errore durante la cancellazione del trade:", error);
+            return res.status(500).send({ message: "Errore Server" });
+        }
+    }
 }

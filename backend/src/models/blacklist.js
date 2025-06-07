@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const blacklistSchema = new mongoose.Schema({
     tokenId: {
@@ -7,9 +9,10 @@ const blacklistSchema = new mongoose.Schema({
     },
     createdAt: {
         type: Date,
+        expires: process.env.JWT_EXPIRATION,
         default: Date.now
     }
 });
 
-const Blacklist = mongoose.model('blacklist', blacklistSchema);
-export default Blacklist;
+const blacklistModel = mongoose.model('blacklist', blacklistSchema);
+export default blacklistModel;

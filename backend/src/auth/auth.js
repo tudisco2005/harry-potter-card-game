@@ -1,5 +1,5 @@
 import jsonwebtoken from 'jsonwebtoken';
-import blacklistSchema from '../controllers/blacklist.js';
+import blacklistModel from '../models/blacklist.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -53,7 +53,7 @@ export const authenticateUser = async (req, res, next) => {
 
     // check if the token is in blacklist
     try{
-      const result = await blacklistSchema.findOne({ tokenId: token });
+      const result = await blacklistModel.findOne({ tokenId: token });
       if (result) {
           // Token trovato nella blacklist
           console.log("[-] Token trovato nella blacklist:", token);

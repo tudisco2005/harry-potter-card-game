@@ -22,7 +22,7 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    "username": username_email,
+                    username: username_email,
                     password
                 })
             });

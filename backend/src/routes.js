@@ -12,16 +12,20 @@ import {
     openPackageCardsUserController,
     buyCreditUserController,
     getUserMissingCardsController,
-    getUserDoubleCardsController
+    getUserDoubleCardsController,
+    getUserAllTrades
 } from "./controllers/user.js";
 
 import {
     createTradeController,
     getAllTradesController,
-    acceptTradeController
+    acceptTradeController,
+    deleteTradeController
 } from "./controllers/trade.js";
 
 import { authenticateUser } from "./auth/auth.js";
+import { checkExpiredTrades } from './utils/checkExpiredTrades.js';
+
 
 const router = express.Router();
 
@@ -40,10 +44,14 @@ export const initRoutes = async (mongodb) => {
     router.post("/user/credits/purchase", await authenticateUser, buyCreditUserController(mongodb))
     router.get("/user/missingcards", await authenticateUser, getUserMissingCardsController(mongodb));
     router.get("/user/doublecards", await authenticateUser, getUserDoubleCardsController(mongodb));
+    router.get("/user/trades", await authenticateUser, getUserAllTrades(mongodb))
 
     // API endpoint for trade handling
+    router.use(checkExpiredTrades); // Middleware to check and expire trades
+    // This middleware will run before any trade-related routes
     router.post("/trade/create", await authenticateUser, createTradeController(mongodb));
     router.get("/trade/all", await authenticateUser, getAllTradesController(mongodb));
     router.post("/trade/accept", await authenticateUser, acceptTradeController(mongodb));
+    router.delete("/trade/delete", await authenticateUser, deleteTradeController(mongodb));
     return router;
 };

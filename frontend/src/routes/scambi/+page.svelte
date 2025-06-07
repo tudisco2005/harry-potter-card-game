@@ -4,43 +4,11 @@
     import TradeCard from "./../../components/TradeCard.svelte";
     import CardMiniStack from "./../../components/CardMiniStack.svelte";
 
-    const example = {
-        id: "9e3f7ce4-b9a7-4244-b709-dae5c1f1d4a8",
-        name: "Harry Potter",
-        alternate_names: [
-            "The Boy Who Lived",
-            "The Chosen One",
-            "Undesirable No. 1",
-            "Potty",
-        ],
-        species: "human",
-        gender: "male",
-        house: "Gryffindor",
-        dateOfBirth: "31-07-1980",
-        yearOfBirth: 1980,
-        wizard: true,
-        ancestry: "half-blood",
-        eyeColour: "green",
-        hairColour: "black",
-        wand: {
-            wood: "holly",
-            core: "phoenix tail feather",
-            length: 11,
-        },
-        patronus: "stag",
-        hogwartsStudent: true,
-        hogwartsStaff: false,
-        actor: "Daniel Radcliffe",
-        alternate_actors: [],
-        alive: true,
-        image: "https://ik.imagekit.io/hpapi/harry.jpg",
-    };
-
     let dettailCardsModal = $state(false);
     let dettailCards = $state([]);
     let dettailCardsText = $state("");
-    let offerCards = $state([example, example]);
-    let askCards = $state([example]);
+    let offerCards = $state([]);
+    let askCards = $state([]);
 
     let offerPossibleCard = $state([]);
     let askPossibleCard = $state([]);
@@ -89,6 +57,10 @@
     // Stato per i modal di selezione
     let selectOfferedCardsModal = $state(false);
     let selectAskCardsModal = $state(false);
+
+    let allTrades = $state([]);
+    let searchQuery = $state("");
+    let allTradesFiltered = $state(allTrades)
 
     // Funzione per aprire il modal di selezione carte da offrire
     function openSelectOfferedCards() {
@@ -163,6 +135,7 @@
 
         // Inizializza le carte offerte e chieste
         getAllTrades();
+        allTradesFiltered = allTrades
         fetchAvailableCardsForCreateTrade();
         fetchOfferCardsForCreateTrade();
     });
@@ -219,6 +192,7 @@
             "5 giorni": 432000000,
         }[expireTime];
 
+        // console.log("Tempo di scadenza in ms:", expireTimeInMs);
 
         if (!expireTimeInMs) {
             errorBox = true;
@@ -240,6 +214,7 @@
 
         selectedAskCards.forEach(card => {
             card.quantity = 1;
+            card.alredyRequested = true;
         });
 
         await fetch("/api/createTrade", {
@@ -268,6 +243,8 @@
             errorText = "";
             selectedOfferedCards = [];
             selectedAskCards = [];
+            fetchOfferCardsForCreateTrade();
+            fetchAvailableCardsForCreateTrade();
             invalidateAll()
             setTimeout(() => {
                 createTradeModal = false;
@@ -288,8 +265,6 @@
         errorText = "";
     }
 
-    let allTrades = $state([]);
-
     async function getAllTrades() {
         try {
             const response = await fetch("/api/allTrades", {
@@ -301,6 +276,8 @@
             }
             const data = await response.json();
             allTrades = data.trades; // Assicurati che la risposta abbia un campo 'trades'
+            allTradesFiltered = data.trades;
+            search();
         } catch (error) {
             console.error("Errore di rete:", error);
             return [];
@@ -316,7 +293,114 @@
         dettailCardsModal = true;
         dettailCardsText = "Chieste";
     }
+
+    let errorTradeModal = $state(false);
+    let errorTradeMessage = $state("");
+    async function acceptTradeClick(tradeId) {
+        await fetch("/api/acceptTrade", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ tradeId }),
+        }).then(async (response) => {
+            const data = await response.json();
+            if (!response.ok) {
+                console.error("Errore nell'accettare lo scambio");
+                errorTradeModal = true;
+                getAllTrades();
+                errorTradeMessage = data.message;
+                return;
+            }
+            errorTradeModal = false;
+            errorTradeMessage = "";
+            console.log("Scambio accettato con successo!", data);
+            getAllTrades();
+            invalidateAll();
+        }).catch((error) => {
+            errorTradeModal = true;
+            errorTradeMessage = "Errore durante l'accettazione dello scambio: " + error.message;
+            console.error("Errore di rete:", error);
+        });
+    }
+
+    let sortBy = $state("recent")
+    function search() {
+        console.log(allTradesFiltered)
+        searchQuery = searchQuery.trim();
+        if (!searchQuery) {
+            allTradesFiltered = allTrades;
+        } else {
+            allTradesFiltered = allTrades.filter(trade => {
+                return trade.offererInfo.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       trade.offered_cardIds.some(card => card.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            });
+        }
+
+        // sort
+        if(sortBy == "recent") {
+            // sort trades by createdAt descending (most recent first)
+            allTradesFiltered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        } else {
+            // sort trades by expirateAt ascending (earlier expiration first)
+            allTradesFiltered.sort((a, b) => new Date(a.expirateAt) - new Date(b.expirateAt));
+        }
+    }
 </script>
+
+{#if errorTradeModal}
+<div
+        class="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center p-4"
+        on:click={() => (errorTradeModal = false)}
+    >
+        <!-- Contenitore del modale -->
+        <div
+            class="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-xl dark:bg-gray-800 overflow-hidden"
+            on:click|stopPropagation
+        >
+            <!-- Header del modale -->
+            <div
+                class="flex items-center justify-between p-4 border-b dark:border-gray-600"
+            >
+                <h2
+                    class="text-2xl font-semibold text-gray-900 dark:text-white"
+                >
+                    Errore nello scambio
+                </h2>
+                <button
+                    type="button"
+                    class="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 dark:hover:bg-gray-600 dark:hover:text-white"
+                    on:click={() => (errorTradeModal = false)}
+                >
+                    <svg
+                        aria-hidden="true"
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    <span class="sr-only">Close modal</span>
+                </button>
+            </div>
+
+            <!-- Contenuto scorrevole del modale -->
+            <div
+                class="p-6 text-white"
+            >
+                {errorTradeMessage}
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+        on:click={() => (errorTradeModal = false)}
+    ></div>
+{/if}
 
 {#if dettailCardsModal}
     <div
@@ -372,7 +456,7 @@
                 >
                     {#each dettailCards as card}
                         <div class="w-full max-w-xs">
-                            <CharacterCard quantity={1} content={card} />
+                            <CharacterCard quantity={card.quantity} content={card} />
                         </div>
                     {/each}
                 </div>
@@ -469,7 +553,7 @@
                             Scade Tra:
                         </label>
                         <select
-                            bind:value={expireTimesOptions[0].text}
+                            bind:value={expireTime}
                             id="countries"
                             class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
                         >
@@ -632,7 +716,7 @@
                 <h2
                     class="text-2xl font-semibold text-gray-900 dark:text-white"
                 >
-                    Carte da Offrire
+                    Carte da Chiedere
                 </h2>
                 <button
                     type="button"
@@ -679,6 +763,7 @@
                                 flipDisabled={true}
                                 quantity={card.quantity}
                                 content={card}
+                                requested={card.alreadyRequested}
                             />
                         </div>
                     {/each}
@@ -733,8 +818,10 @@
                         >
                         <div class="relative">
                             <input
+                                bind:value={searchQuery}
+                                on:input={search}
                                 type="text"
-                                placeholder="Nome carta..."
+                                placeholder="Nome carta che vuoi ricevere, nome utente..."
                                 class="w-full bg-gray-800/50 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-yellow-400 focus:outline-none"
                             />
                             <span class="absolute right-3 top-3 text-gray-400"
@@ -749,12 +836,12 @@
                             >Ordina per</label
                         >
                         <select
+                            on:click={search}
+                            bind:value={sortBy}
                             class="w-full bg-gray-800/50 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-yellow-400 focus:outline-none"
                         >
-                            <option>Più recenti</option>
-                            <option>Valore crescente</option>
-                            <option>Valore decrescente</option>
-                            <option>Scadenza</option>
+                            <option value="recent">Più recenti</option>
+                            <option value="expire">Scadenza</option>
                         </select>
                     </div>
                     <div class="sm:flex-shrink-0 mt-2 sm:mt-0">
@@ -795,16 +882,29 @@
             <div class="flex flex-wrap gap-2 items-center">
                 <span class="text-sm text-gray-300">Filtri rapidi:</span>
                 <button
+                    on:click={() => { searchQuery = ""; search(); }}
                     class="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors"
                 >
                     Tutti
                 </button>
                 <button
+                    on:click={() => {
+                        allTradesFiltered = allTrades.filter(trade =>
+                            trade.offered_cardIds.some(card =>
+                                askPossibleCard.some(missing => missing.id === card.id)
+                            )
+                        );
+                    }}
                     class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm border border-purple-500/30 hover:bg-purple-500/30 transition-colors"
                 >
                     Carte Mancanti
                 </button>
                 <button
+                    on:click={() => {
+                        allTradesFiltered = allTrades.filter(
+                            (trade) => trade.offered_cardIds.length > 1,
+                        );
+                    }}
                     class="px-3 py-1 bg-green-500/20 text-green-400 rounded-full text-sm border border-green-500/30 hover:bg-green-500/30 transition-colors"
                 >
                     Più di 2 carte
@@ -816,7 +916,7 @@
     <!-- Lista Scambi -->
     <section class="relative z-10 max-w-7xl mx-auto px-4 pb-20">
         <div class="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            {#each allTrades.slice(0, renderLimit) as trade}
+            {#each allTradesFiltered.slice(0, renderLimit) as trade}
                 <TradeCard
                     offeredCardsClick={() => {dettailCards = trade.offered_cardIds; offeredCardsClick()}}
                     askCardsClick={() => {dettailCards = trade.requested_cardIds; askCardsClick()}}
@@ -827,10 +927,8 @@
                     rating={trade.offererInfo.rating}
                     completedTrades={trade.offererInfo.completedTrades}
                     username={trade.offererInfo.username}
-
-                    acceptTradeClick={() => {
-                        console.log("scambio accettato");
-                    }}
+                    tradeId={trade._id}
+                    acceptTradeClick={() => acceptTradeClick(trade._id)}
                 />
             {/each}
         </div>
