@@ -6,6 +6,31 @@
 
     export let offeredCards;
     export let askCards;
+
+    export let expireTime;
+    export let rating;
+    export let username;
+    export let userInitials;
+    export let completedTrades;
+
+    function formatExpireTime(expireTime) {
+        const now = new Date();
+        const expireDate = new Date(expireTime);
+        const diff = expireDate - now;
+
+        if (diff <= 0) return "Scaduto";
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+
+        let result = "";
+        if (days > 0) result += `${days} giorni `;
+        if (hours > 0) result += `${hours} ore `;
+        if (minutes > 0) result += `${minutes} minuti`;
+
+        return result.trim() || "Meno di un minuto";
+    }
 </script>
 
 
@@ -15,9 +40,10 @@
     <div class="flex items-start justify-between mb-4">
         <div class="flex items-center space-x-3">
             <div
-                class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center"
+                class="w-10 h-10 rounded-full flex items-center justify-center"
+                style={"background: linear-gradient(135deg, #" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0') + ", #" + Math.floor(Math.random() * 16777215).toString(16).padStart(6, '0') + ")"}
             >
-                <span class="text-white font-bold text-sm">AK</span>
+                <span class="text-white font-bold text-sm">{userInitials}</span>
             </div>
             <!-- <div
                             class="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center"
@@ -35,42 +61,57 @@
                             <span class="text-white font-bold text-sm">SK</span>
                         </div> -->
             <div>
-                <div class="text-white font-semibold">Alex Knight</div>
-                <div class="text-sm text-gray-400">⭐ 4.9 (156 scambi)</div>
+                <div class="text-white font-semibold">{username}</div>
+                <div class="text-sm text-gray-400">⭐ {rating} ({completedTrades} scambi)</div>
             </div>
         </div>
         <div class="text-right">
             <div class="text-xs text-gray-400">Scade tra</div>
-            <div class="text-sm text-yellow-400 font-semibold">2 giorni</div>
-            <div class="text-sm text-red-400 font-semibold">8 ore</div>
+
+            <div
+                class="text-sm font-semibold"
+                class:text-green-400={new Date(expireTime) - new Date() > 3 * 24 * 60 * 60 * 1000}
+                class:text-red-400={new Date(expireTime) - new Date() < 24 * 60 * 60 * 1000}
+                class:text-yellow-400={
+                    new Date(expireTime) - new Date() <= 3 * 24 * 60 * 60 * 1000 &&
+                    new Date(expireTime) - new Date() >= 24 * 60 * 60 * 1000
+                }
+            >
+                {formatExpireTime(expireTime)}
+            </div>
         </div>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <!-- Carta Offerta -->
         <div class="relative">
-            <div class="text-xs text-gray-400 mb-2">OFFRE</div>
+            <div class="text-xs text-gray-400 mb-2">OFFRE {offeredCards.length > 0 ? `(${offeredCards.length} Carte)` : ''}</div>
             <div on:click = {offeredCardsClick}>
                 <CardMiniStack cards={offeredCards} flipDisabled={true}  />
             </div>
+            {#if offeredCards.length > 0}
             <div
                 class="absolute top-4 -right-2 bg-yellow-500 text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
             >
-                3
+                {offeredCards.length}
             </div>
+            {/if}
         </div>
 
         <!-- Carta Richiesta -->
         <div class="relative">
-            <div class="text-xs text-gray-400 mb-2">CERCA</div>
+            <div class="text-xs text-gray-400 mb-2">CERCA {askCards.length > 0 ? `(${askCards.length} Carte)` : ''}</div>
             <div on:click = {askCardsClick}>
                 <CardMiniStack cards={askCards} />
             </div>
-            <div
-                class="absolute top-4 -right-2 bg-yellow-500 text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
-            >
-                3
-            </div>
+
+            {#if askCards.length > 0}
+                <div
+                    class="absolute top-4 -right-2 bg-yellow-500 text-black rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold"
+                >
+                    {askCards.length}
+                </div>
+            {/if}
         </div>
     </div>
 

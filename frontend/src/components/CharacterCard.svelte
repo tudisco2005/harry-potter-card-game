@@ -1,6 +1,7 @@
 <script>
     import CharacterCardContent from "./CharacterCardContent.svelte";
 
+    export let flipDisabled = false;
     export let content;
     export let quantity = 1;
 </script>
@@ -27,6 +28,6 @@
             </div>
         </div>
     {/if}
-    <CharacterCardContent {...content} />
+    <CharacterCardContent {...content} flipDisabled={flipDisabled}/>
 </div>
 

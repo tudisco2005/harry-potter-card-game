@@ -36,6 +36,6 @@ const tradeSchema = new mongoose.Schema({
     },
 });
 
-const Trade = mongoose.model("Trade", tradeSchema);
+const tradeModel = mongoose.model("Trade", tradeSchema);
 
-export { Trade };
+export { tradeModel };

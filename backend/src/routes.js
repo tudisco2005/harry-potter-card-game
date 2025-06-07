@@ -10,8 +10,17 @@ import {
     searchUserCardsController,
     sellUserCardsController,
     openPackageCardsUserController,
-    buyCreditUserController
+    buyCreditUserController,
+    getUserMissingCardsController,
+    getUserDoubleCardsController
 } from "./controllers/user.js";
+
+import {
+    createTradeController,
+    getAllTradesController,
+    acceptTradeController
+} from "./controllers/trade.js";
+
 import { authenticateUser } from "./auth/auth.js";
 
 const router = express.Router();
@@ -29,6 +38,12 @@ export const initRoutes = async (mongodb) => {
     router.post("/user/sellcards", await authenticateUser, sellUserCardsController(mongodb));
     router.post("/user/openpackage", await authenticateUser, openPackageCardsUserController(mongodb));
     router.post("/user/credits/purchase", await authenticateUser, buyCreditUserController(mongodb))
+    router.get("/user/missingcards", await authenticateUser, getUserMissingCardsController(mongodb));
+    router.get("/user/doublecards", await authenticateUser, getUserDoubleCardsController(mongodb));
 
+    // API endpoint for trade handling
+    router.post("/trade/create", await authenticateUser, createTradeController(mongodb));
+    router.get("/trade/all", await authenticateUser, getAllTradesController(mongodb));
+    router.post("/trade/accept", await authenticateUser, acceptTradeController(mongodb));
     return router;
 };

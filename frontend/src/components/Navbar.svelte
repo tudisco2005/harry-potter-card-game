@@ -60,7 +60,7 @@
                         <span class="block truncate text-sm font-medium">{email}</span>
                     </DropdownHeader>
                     <DropdownItem on:click={() => {goto("/profile")}}>Profilo</DropdownItem>
-                    <DropdownItem on:click={() => {goto("/payment")}}>Pagamento</DropdownItem>
+                    <!-- <DropdownItem on:click={() => {goto("/payment")}}>Pagamento</DropdownItem> -->
 
                     <DropdownDivider />
                     <DropdownItem class="text-red-600" on:click={() => {goto("/logout")}}>Esci</DropdownItem>

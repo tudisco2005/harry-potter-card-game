@@ -70,6 +70,8 @@ export const createUserController = (mongodb) => {
             quantity: 0
         }));
 
+        // starting balance
+        const startingBalance = 5; // Starting balance for new users
 
         try {
             await userModel.create({
@@ -77,7 +79,8 @@ export const createUserController = (mongodb) => {
                 email,
                 favouriteWizard,
                 password: hash,
-                game_cards
+                game_cards,
+                balance: startingBalance
             });
 
             // Log user registration details
@@ -519,6 +522,72 @@ export const searchUserCardsController = (mongodb) => {
         } catch (error) {
             console.error("[-] Errore durante la ricerca delle carte:", error);
             res.status(500).send({ message: "Errore durante la ricerca delle carte" });
+        }
+    }
+}
+
+export const getUserMissingCardsController = (mongodb) => {
+    return async function getUserMissingCards(req, res) {
+        try {
+            // Get user info from database
+            const user = await userModel.findOne({ _id: req.userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+            // Get all cards from the database
+            const missingCards = user.game_cards.filter(card => card.quantity === 0);
+            if (missingCards.length === 0) {
+                console.log("[-] Nessuna carta mancante trovata per l'utente:", user.username);
+                missingCards = []; // Ensure missingCards is an empty array if no cards are missing
+            }
+            
+            console.log("[+] Carte mancanti recuperate con successo:", missingCards.length);
+
+            // Send response with missing cards
+            res.status(200).send({
+                message: "Carte mancanti recuperate con successo",
+                missingCards: missingCards
+            });
+
+        } catch (error) {
+            console.error("[-] Errore durante la ricerca delle carte mancanti:", error);
+            res.status(500).send({ message: "Errore durante la ricerca delle carte mancanti" });
+        }
+    }
+}
+
+export const getUserDoubleCardsController = (mongodb) => {
+    return async function getUserDoubleCards(req, res) {
+        try {
+            // Get user info from database
+            const user = await userModel.findOne({ _id: req.userId }).catch((error) => {
+                console.error("[-] Errore durante il recupero delle informazioni utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+            if (!user) {
+                console.log("[-] Utente non trovato");
+                return res.status(404).send({ message: "Utente non trovato" });
+            }
+            // Get all cards from the database
+            const doubleCards = user.game_cards.filter(card => card.quantity > 1);
+            if (doubleCards.length === 0) {
+                console.log("[-] Nessuna carta doppia trovata per l'utente:", user.username);
+                return res.status(200).send({ message: "Nessuna carta doppia trovata", doubleCards: [] });
+            }
+
+            console.log("[+] Carte doppie recuperate con successo:", doubleCards.length);
+            // Send response with double cards
+            res.status(200).send({
+                message: "Carte doppie recuperate con successo",
+                doubleCards: doubleCards
+            });
+        } catch (error) {
+            console.error("[-] Errore durante la ricerca delle carte doppie:", error);
+            res.status(500).send({ message: "Errore durante la ricerca delle carte doppie" });
         }
     }
 }

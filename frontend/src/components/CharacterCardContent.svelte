@@ -18,6 +18,7 @@
   // export let alternateActors = [];
   export let alive = true;
   export let image = "";
+  export let flipDisabled = false;
 
   // Funzione per ottenere i colori della casa
   function getHouseColors(houseName) {
@@ -71,6 +72,7 @@
   let isFlipped = false;
 
   function flipCard() {
+    if (flipDisabled) return; // Non permette il flip se disabilitato
     isFlipped = !isFlipped;
   }
 

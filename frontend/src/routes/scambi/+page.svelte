@@ -1,6 +1,8 @@
-<script> // @ts-nocheck
+<script>
+    // @ts-nocheck
     import CharacterCard from "../../components/CharacterCard.svelte";
     import TradeCard from "./../../components/TradeCard.svelte";
+    import CardMiniStack from "./../../components/CardMiniStack.svelte";
 
     const example = {
         id: "9e3f7ce4-b9a7-4244-b709-dae5c1f1d4a8",
@@ -37,22 +39,41 @@
     let dettailCardsModal = $state(false);
     let dettailCards = $state([]);
     let dettailCardsText = $state("");
-    let offerCards = [example, example];
-    let askCards = [example];
+    let offerCards = $state([example, example]);
+    let askCards = $state([example]);
 
-    function offeredCardsClick() {
-        dettailCardsModal = true;
-        dettailCards = offerCards;
-        dettailCardsText = "Offerte";
+    let offerPossibleCard = $state([]);
+    let askPossibleCard = $state([]);
+
+    async function fetchOfferCardsForCreateTrade() {
+        await fetch("/api/doubleCards", { method: "GET", headers: { "Content-Type": "application/json" } }).then(async (response) => {
+            if (!response.ok) {
+                console.error("Errore nel recupero delle carte offerte");
+                return;
+            }
+            const data = await response.json();
+            offerPossibleCard = data.doubleCards; // Assicurati che la risposta abbia un campo 'cards'
+        }).catch((error) => {
+            console.error("Errore di rete:", error);
+        });
     }
 
-    function askCardsClick() {
-        dettailCardsModal = true;
-        dettailCards = askCards;
-        dettailCardsText = "Chieste";
+    
+
+    async function fetchAvailableCardsForCreateTrade() {
+        await fetch("/api/missingCards", { method: "GET", headers: { "Content-Type": "application/json" }}).then(async (response) => {
+            if (!response.ok) {
+                console.error("Errore nel recupero delle carte offerte");
+                return;
+            }
+            const data = await response.json();
+            askPossibleCard = data.missingCards; // Assicurati che la risposta abbia un campo 'cards'
+        }).catch((error) => {
+            console.error("Errore di rete:", error);
+        });
     }
 
-    let createTradeModal = $state(true);
+    let createTradeModal = $state(false);
     let expireTimesOptions = [
         {
             text: "1 ora",
@@ -61,9 +82,240 @@
             text: "1 giorno",
         },
         {
-            text: "5 giorni"
+            text: "5 giorni",
+        },
+    ];
+
+    // Stato per i modal di selezione
+    let selectOfferedCardsModal = $state(false);
+    let selectAskCardsModal = $state(false);
+
+    // Funzione per aprire il modal di selezione carte da offrire
+    function openSelectOfferedCards() {
+        createTradeModal = false;
+        selectOfferedCardsModal = true;
+    }
+
+    function closeSelectOfferedCards() {
+        createTradeModal = true;
+        selectOfferedCardsModal = false;
+    }
+
+    // Funzione per aprire il modal di selezione carte da chiedere
+    function openSelectAskCards() {
+        createTradeModal = false;
+        selectAskCardsModal = true;
+    }
+
+    function closeSelectAskCards() {
+        createTradeModal = true;
+        selectAskCardsModal = false;
+    }
+
+    // render cards in batches
+    let renderLimit = $state(30); // Limite di rendering iniziale
+    const loadMore = () => {
+        renderLimit += 20; // Aumenta il limite di rendering
+    };
+
+    import { onMount, onDestroy } from "svelte";
+    import { browser } from '$app/environment';
+    import { invalidateAll } from "$app/navigation";
+
+    let sentinel;
+    let lastScrollY = 0;
+
+    function onScroll() {
+        const currentScrollY = window.scrollY;
+
+        // Scrolling down: if the sentinel becomes visible, load more cards
+        if (currentScrollY > lastScrollY && sentinel) {
+            const { top } = sentinel.getBoundingClientRect();
+            if (top < window.innerHeight) {
+                loadMore();
+            }
         }
-    ]
+        // Scrolling up: gestione più intelligente della rimozione delle carte
+        else if (currentScrollY < lastScrollY && renderLimit > 30 && sentinel) {
+            const scrollDifference = lastScrollY - currentScrollY;
+            const { top } = sentinel.getBoundingClientRect();
+
+            // Solo se hai scrollato significativamente verso l'alto E il sentinel è molto lontano
+            if (scrollDifference > 200 && top > window.innerHeight * 1.5) {
+                // Rimuovi solo alcune carte, non troppe
+                renderLimit = Math.max(30, renderLimit - 10);
+            }
+
+            // Oppure se sei tornato molto in alto nella pagina
+            else if (currentScrollY < 100 && renderLimit > 50) {
+                // Reset più graduale quando torni in cima
+                renderLimit = Math.max(50, renderLimit - 20);
+            }
+        }
+
+        lastScrollY = currentScrollY;
+    }
+
+    onMount(() => {
+        lastScrollY = window.scrollY;
+        if (!browser) return;
+        window.addEventListener("scroll", onScroll);
+
+        // Inizializza le carte offerte e chieste
+        getAllTrades();
+        fetchAvailableCardsForCreateTrade();
+        fetchOfferCardsForCreateTrade();
+    });
+
+    onDestroy(() => {
+        if (!browser) return;
+        window.removeEventListener("scroll", onScroll);
+    });
+
+    // Stato per le carte selezionate
+    let selectedOfferedCards = $state([]);
+    let selectedAskCards = $state([]);
+    
+    function addOfferedCardToSelectedCards(card) {
+        return () => {
+            if (selectedOfferedCards.includes(card)) {
+                selectedOfferedCards = selectedOfferedCards.filter(
+                    (c) => c !== card,
+                );
+            } else {
+                selectedOfferedCards = [...selectedOfferedCards, card];
+            }
+        };
+    }
+
+    function addAskCardToSelectedCards(card) {
+        return () => {
+            if (selectedAskCards.includes(card)) {
+                selectedAskCards = selectedAskCards.filter((c) => c !== card);
+            } else {
+                selectedAskCards = [...selectedAskCards, card];
+            }
+        };
+    }
+
+    let success = $state(false);
+    let errorBox = $state(false);
+    let errorText = $state("");
+    let expireTime = $state("1 ora");
+
+    async function createTrade(event) {
+        event.preventDefault();
+        if (selectedOfferedCards.length === 0 || selectedAskCards.length === 0) {
+            errorBox = true;
+            success = false;
+            errorText = "Seleziona almeno una carta da offrire e una da chiedere."
+            return;
+        }
+
+        // calcola il tempo in cui lo scambio scade usando il valore selezionato
+        let expireTimeInMs = {
+            "1 ora": 3600000,
+            "1 giorno": 86400000,
+            "5 giorni": 432000000,
+        }[expireTime];
+
+
+        if (!expireTimeInMs) {
+            errorBox = true;
+            success = false;
+            errorText = "Tempo di scadenza non valido.";
+            return;
+        }
+
+        // Calcola la data di scadenza
+        const expireDate = new Date(Date.now() + expireTimeInMs);
+
+        // si puo chiere 1 sola carta per tipo(quantity)
+        // si puo offrire una sola carta per tipo(quantity)
+        selectedOfferedCards.forEach(card => {
+            if (card.quantity > 1) {
+                card.quantity = 1;
+            }
+        });
+
+        selectedAskCards.forEach(card => {
+            card.quantity = 1;
+        });
+
+        await fetch("/api/createTrade", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                offeredCards: selectedOfferedCards,
+                requestedCards: selectedAskCards,
+                expireTime: expireDate,
+            }),
+        }).then(async (response) => {
+            if (!response.ok) {
+                errorBox = true;
+                success = false;
+                errorText = "Errore durante la creazione dello scambio.";
+                return;
+            }
+
+            const { message, trade } = await response.json();
+
+            console.log("Scambio creato con successo!");
+            success = true;
+            errorBox = false;
+            errorText = "";
+            selectedOfferedCards = [];
+            selectedAskCards = [];
+            invalidateAll()
+            setTimeout(() => {
+                createTradeModal = false;
+            }, 200); 
+        }).catch((error) => {
+            errorBox = true;
+            success = false;
+            errorText = "Errore di rete: " + error.message;
+     });
+    }
+
+    function resetCreateTradeModal() {
+        selectedOfferedCards = [];
+        selectedAskCards = [];
+        expireTime = "1 ora";
+        success = false;
+        errorBox = false;
+        errorText = "";
+    }
+
+    let allTrades = $state([]);
+
+    async function getAllTrades() {
+        try {
+            const response = await fetch("/api/allTrades", {
+                method: "GET",
+                headers: { "Content-Type": "application/json" },
+            });
+            if (!response.ok) {
+                throw new Error("Errore nel recupero degli scambi");
+            }
+            const data = await response.json();
+            allTrades = data.trades; // Assicurati che la risposta abbia un campo 'trades'
+        } catch (error) {
+            console.error("Errore di rete:", error);
+            return [];
+        }
+    }
+
+    async function offeredCardsClick() {
+        dettailCardsModal = true;
+        dettailCardsText = "Offerte";
+    }
+
+    async function askCardsClick() {
+        dettailCardsModal = true;
+        dettailCardsText = "Chieste";
+    }
 </script>
 
 {#if dettailCardsModal}
@@ -135,8 +387,6 @@
 {/if}
 
 {#if createTradeModal}
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         class="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center p-4"
         on:click={() => (createTradeModal = false)}
@@ -175,74 +425,287 @@
                 </button>
             </div>
             <!-- Modal body -->
-            <form action="#">
-                <div class="grid gap-4 mb-4 sm:grid-cols-2">
+            <form>
+                <div class="grid gap-4 mb-4">
                     <div>
                         <label
-                            for="name"
                             class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                            >Doppie</label
                         >
-                        <input
-                            type="text"
-                            name="name"
-                            id="name"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Type product name"
-                            required=""
-                        />
+                            Carte che offri
+                        </label>
+                        <div class="flex flex-col gap-2">
+                            <button
+                                type="button"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                                on:click={openSelectOfferedCards}
+                            >
+                                Seleziona carte da offrire ({selectedOfferedCards.length})
+                            </button>
+                        </div>
                     </div>
+
                     <div>
                         <label
-                            for="brand"
                             class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                            >Mancanti</label
                         >
-                        <input
-                            type="text"
-                            name="brand"
-                            id="brand"
-                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                            placeholder="Product brand"
-                            required=""
-                        />
-                    </div> 
+                            Carte che cerchi
+                        </label>
+                        <div class="flex flex-col gap-2">
+                            <button
+                                type="button"
+                                class="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+                                on:click={openSelectAskCards}
+                            >
+                                Seleziona carte che cerchi ({selectedAskCards.length})
+                            </button>
+                        </div>
+                    </div>
+
                     <div class="sm:col-span-2">
                         <label
                             for="description"
                             class="block mb-2 text-sm font-medium text-gray-900 dark:text-white"
-                            >Scade Tra:</label
                         >
-                        <select id="countries" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500">
+                            Scade Tra:
+                        </label>
+                        <select
+                            bind:value={expireTimesOptions[0].text}
+                            id="countries"
+                            class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"
+                        >
                             {#each expireTimesOptions as option, i}
-                                <option selected={i==0} value="{option.text}">{option.text}</option>
+                                <option selected={i == 0} value={option.text}
+                                    >{option.text}</option
+                                >
                             {/each}
                         </select>
                     </div>
                 </div>
-                <button
-                    type="submit"
-                    class="text-white inline-flex items-center bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800"
-                >
-                    <svg
-                        class="mr-1 -ml-1 w-6 h-6"
-                        fill="currentColor"
-                        viewBox="0 0 20 20"
-                        xmlns="http://www.w3.org/2000/svg"
-                        ><path
-                            fill-rule="evenodd"
-                            d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
-                            clip-rule="evenodd"
-                        ></path></svg
+                <div>
+                    {#if errorBox}
+                        <div
+                            class="p-4 mb-4 text-sm text-red-800 bg-red-50 rounded-lg dark:bg-red-200 dark:text-red-800"
+                            role="alert"
+                        >
+                            <span class="font-medium">Errore!</span> {errorText}
+                        </div>
+                    {/if}
+                    <button
+                    disabled={success}
+                    on:click={createTrade}
+                        type="submit"
+                        class="text-white inline-flex items-center {success ? 'bg-green-600 ' : ' dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 bg-primary-700 hover:bg-primary-800'} focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center "
                     >
-                    Crea Scambio
-                </button>
+                        <svg
+                            class="mr-1 -ml-1 w-6 h-6"
+                            fill="currentColor"
+                            viewBox="0 0 20 20"
+                            xmlns="http://www.w3.org/2000/svg"
+                            ><path
+                                fill-rule="evenodd"
+                                d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z"
+                                clip-rule="evenodd"
+                            ></path></svg
+                        >
+                        {success ? "Scambio creato con successo" : 'Crea Scambio'}
+                    </button>
+                </div>
             </form>
         </div>
     </div>
     <div
         class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
         on:click={() => (createTradeModal = false)}
+    ></div>
+{/if}
+
+<!-- Modal per selezionare le carte da offrire -->
+{#if selectOfferedCardsModal}
+    <div
+        class="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center p-4"
+        on:click={closeSelectOfferedCards}
+    >
+        <!-- Contenitore del modale -->
+        <div
+            class="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-xl dark:bg-gray-800 flex flex-col"
+            on:click|stopPropagation
+        >
+            <!-- Header del modale -->
+            <div
+                class="flex items-center justify-between p-4 border-b dark:border-gray-600 flex-shrink-0"
+            >
+                <h2
+                    class="text-2xl font-semibold text-gray-900 dark:text-white"
+                >
+                    Carte da Offrire
+                </h2>
+                <button
+                    type="button"
+                    class="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 dark:hover:bg-gray-600 dark:hover:text-white"
+                    on:click={closeSelectOfferedCards}
+                >
+                    <svg
+                        aria-hidden="true"
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    <span class="sr-only">Close modal</span>
+                </button>
+            </div>
+
+            <!-- Contenuto scorrevole del modale -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
+                >
+                    {#if offerPossibleCard.length === 0}
+                        <div class="col-span-full text-center text-gray-500">
+                            Nessuna carta disponibile da offrire.
+                        </div>
+                    {/if}
+                    {#each offerPossibleCard.slice(0, renderLimit) as card}
+                        <div
+                            on:click={addOfferedCardToSelectedCards(card)}
+                            class="cursor-pointer {selectedOfferedCards.includes(
+                                card,
+                            )
+                                ? 'border-2 border-blue-700 bg-blue-600 py-2 rounded-xl'
+                                : ''}"
+                        >
+                            <CharacterCard
+                                flipDisabled={true}
+                                quantity={card.quantity}
+                                content={card}
+                            />
+                        </div>
+                    {/each}
+
+                    <!-- Sentinel element to detect scroll position -->
+                    <div bind:this={sentinel} class="col-span-full h-1"></div>
+                </div>
+            </div>
+
+            <!-- Bottone OK centrato in basso al modal -->
+            {#if selectedOfferedCards.length > 0}
+                <div class="flex justify-center p-4 border-t dark:border-gray-600 flex-shrink-0">
+                    <button
+                        type="button"
+                        class="bg-blue-600 text-white text-sm font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 text-lg transition-colors"
+                        on:click={closeSelectOfferedCards}
+                    >
+                        Conferma Offerte ({selectedOfferedCards.length})
+                    </button>
+                </div>
+            {/if}
+        </div>
+    </div>
+
+    <div
+        class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+        on:click={closeSelectOfferedCards}
+    ></div>
+{/if}
+
+<!-- Modal per selezionare le carte da chiedere -->
+{#if selectAskCardsModal}
+    <div
+        class="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center p-4"
+        on:click={closeSelectAskCards}
+    >
+        <!-- Contenitore del modale -->
+        <div
+            class="relative w-full max-w-6xl max-h-[90vh] bg-white rounded-lg shadow-xl dark:bg-gray-800 flex flex-col"
+            on:click|stopPropagation
+        >
+            <!-- Header del modale -->
+            <div
+                class="flex items-center justify-between p-4 border-b dark:border-gray-600 flex-shrink-0"
+            >
+                <h2
+                    class="text-2xl font-semibold text-gray-900 dark:text-white"
+                >
+                    Carte da Offrire
+                </h2>
+                <button
+                    type="button"
+                    class="text-gray-400 hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 dark:hover:bg-gray-600 dark:hover:text-white"
+                    on:click={closeSelectAskCards}
+                >
+                    <svg
+                        aria-hidden="true"
+                        class="w-5 h-5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                        xmlns="http://www.w3.org/2000/svg"
+                    >
+                        <path
+                            fill-rule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clip-rule="evenodd"
+                        />
+                    </svg>
+                    <span class="sr-only">Close modal</span>
+                </button>
+            </div>
+
+            <!-- Contenuto scorrevole del modale -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <div
+                    class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
+                >
+                    {#if askPossibleCard.length === 0}
+                        <div class="col-span-full text-center text-gray-500">
+                            Nessuna carta disponibile da chiedere.
+                        </div>
+                    {/if}
+                    {#each askPossibleCard.slice(0, renderLimit) as card}
+                        <div
+                            on:click={addAskCardToSelectedCards(card)}
+                            class="cursor-pointer {selectedAskCards.includes(
+                                card,
+                            )
+                                ? 'border-2 border-blue-700 bg-blue-600 py-2 rounded-xl'
+                                : ''}"
+                        >
+                            <CharacterCard
+                                flipDisabled={true}
+                                quantity={card.quantity}
+                                content={card}
+                            />
+                        </div>
+                    {/each}
+
+                    <!-- Sentinel element to detect scroll position -->
+                    <div bind:this={sentinel} class="col-span-full h-1"></div>
+                </div>
+            </div>
+
+            <!-- Bottone OK centrato in basso al modal -->
+            {#if selectedAskCards.length > 0}
+                <div class="flex justify-center p-4 border-t dark:border-gray-600 flex-shrink-0">
+                    <button
+                        type="button"
+                        class="bg-blue-600 text-white text-sm font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 text-lg transition-colors"
+                        on:click={closeSelectAskCards}
+                    >
+                        Conferma Offerte ({selectedAskCards.length})
+                    </button>
+                </div>
+            {/if}
+        </div>
+    </div>
+
+    <div
+        class="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+        on:click={closeSelectAskCards}
     ></div>
 {/if}
 
@@ -301,14 +764,30 @@
                         >
                         <button
                             class="bg-yellow-500 text-white hover:bg-yellow-600 font-medium px-3 py-3 rounded-lg transition-colors duration-200 flex items-center gap-2 whitespace-nowrap w-full"
-                            on:click={createTradeModal=true}
+                            on:click={() => {
+                                resetCreateTradeModal();
+                                createTradeModal = true;
+                            }}
+                        >
+                            <svg
+                                class="w-5 h-5"
+                                aria-hidden="true"
+                                xmlns="http://www.w3.org/2000/svg"
+                                width="24"
+                                height="24"
+                                fill="none"
+                                viewBox="0 0 24 24"
                             >
-                            <svg class="w-5 h-5" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24">
-                                <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14m-7 7V5"/>
+                                <path
+                                    stroke="currentColor"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M5 12h14m-7 7V5"
+                                />
                             </svg>
                             Nuovo scambio
                         </button>
-                        
                     </div>
                 </div>
             </div>
@@ -337,16 +816,23 @@
     <!-- Lista Scambi -->
     <section class="relative z-10 max-w-7xl mx-auto px-4 pb-20">
         <div class="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
-            <!-- Scambio 1 - Leggendario -->
-            <TradeCard
-                {offeredCardsClick}
-                {askCardsClick}
-                offeredCards={offerCards}
-                {askCards}
-                acceptTradeClick={() => {
-                    console.log("scambio accetato");
-                }}
-            />
+            {#each allTrades.slice(0, renderLimit) as trade}
+                <TradeCard
+                    offeredCardsClick={() => {dettailCards = trade.offered_cardIds; offeredCardsClick()}}
+                    askCardsClick={() => {dettailCards = trade.requested_cardIds; askCardsClick()}}
+                    offeredCards={trade.offered_cardIds}
+                    askCards={trade.requested_cardIds}
+                    expireTime={trade.expirateAt}
+                    userInitials={trade.offererInfo.userInitials}
+                    rating={trade.offererInfo.rating}
+                    completedTrades={trade.offererInfo.completedTrades}
+                    username={trade.offererInfo.username}
+
+                    acceptTradeClick={() => {
+                        console.log("scambio accettato");
+                    }}
+                />
+            {/each}
         </div>
     </section>
 </div>
