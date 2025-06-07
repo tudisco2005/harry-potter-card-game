@@ -7,7 +7,7 @@ export async function GET({ locals }) {
             const token = locals.user?.token;
     
             if (token) {
-                const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/doublecards`, {
+                const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/cards/double`, {
                     method: 'GET',
                     headers: {
                         'Content-Type': 'application/json',

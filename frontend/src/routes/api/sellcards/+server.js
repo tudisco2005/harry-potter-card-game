@@ -6,7 +6,7 @@ export async function POST({ locals, request }) {
     const token = locals.user?.token;
     const { cards } = await request.json();
 
-    const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/sellcards`, {
+    const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/cards/sell`, {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',

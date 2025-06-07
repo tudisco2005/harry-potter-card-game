@@ -5,7 +5,51 @@ import blacklistModel from '../models/blacklist.js';
 import { generateToken, verifyToken } from '../auth/auth.js';
 import { generateRandomCards } from '../utils/utils.js';
 
-
+/**
+ * @swagger
+ * /api/user/register:
+ *   post:
+ *     tags:
+ *       - Utente
+ *     summary: Registra un nuovo utente
+ *     description: Crea un nuovo account utente con username, email, password e mago preferito
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - email
+ *               - favouriteWizard
+ *               - password
+ *               - confirmPassword
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Nome utente (non può contenere @)
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 description: Email dell'utente
+ *               favouriteWizard:
+ *                 type: string
+ *                 description: Mago preferito dell'utente
+ *               password:
+ *                 type: string
+ *                 description: Password (min 8 caratteri, 1 maiuscola, 1 minuscola, 1 numero)
+ *               confirmPassword:
+ *                 type: string
+ *                 description: Conferma password
+ *     responses:
+ *       201:
+ *         description: Utente registrato con successo
+ *       400:
+ *         description: Dati non validi o mancanti
+ *       500:
+ *         description: Errore del server
+ */
 export const createUserController = (mongodb) => {
     return async function registerUser(req, res) {
         const { username, email, favouriteWizard, password, confirmPassword } = req.body;
@@ -96,6 +140,51 @@ export const createUserController = (mongodb) => {
     }
 };
 
+/**
+ * @swagger
+ * /api/user/login:
+ *   post:
+ *     tags:
+ *       - Utente
+ *     summary: Login utente
+ *     description: Autentica un utente esistente con username/email e password
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - username
+ *               - password
+ *             properties:
+ *               username:
+ *                 type: string
+ *                 description: Username o email dell'utente
+ *               password:
+ *                 type: string
+ *                 description: Password dell'utente
+ *     responses:
+ *       200:
+ *         description: Login effettuato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 token:
+ *                   type: string
+ *       400:
+ *         description: Dati mancanti
+ *       401:
+ *         description: Credenziali non valide
+ *       404:
+ *         description: Utente non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const loginUserController = (mongodb) => {
     return async function loginUser(req, res) {
         const { username, password } = req.body;
@@ -175,6 +264,31 @@ export const logoutUserController = (mongodb) => {
     }
 };
 
+/**
+ * @swagger
+ * /api/user/token-status:
+ *   get:
+ *     tags:
+ *       - Utente
+ *     summary: Verifica stato token
+ *     description: Verifica se il token JWT dell'utente è ancora valido
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Token valido
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 valid:
+ *                   type: boolean
+ *       401:
+ *         description: Token non valido
+ *       500:
+ *         description: Errore del server
+ */
 export const tokenStatusUserController = (mongodb) => {
     return async function tokenStatus(req, res) {
         try {
@@ -195,6 +309,50 @@ export const tokenStatusUserController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/info:
+ *   get:
+ *     tags:
+ *       - Utente
+ *     summary: Ottieni informazioni utente
+ *     description: Recupera le informazioni del profilo dell'utente autenticato
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Informazioni utente recuperate con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     username:
+ *                       type: string
+ *                     email:
+ *                       type: string
+ *                     favouriteWizard:
+ *                       type: string
+ *                     game_cards:
+ *                       type: array
+ *                     trades:
+ *                       type: array
+ *                     paymentInfo:
+ *                       type: object
+ *                     balance:
+ *                       type: number
+ *                     createdAt:
+ *                       type: string
+ *       404:
+ *         description: Utente non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const getUserInfoController = (mongodb) => {
     return async function getUserInfo(req, res) {
         try {
@@ -236,11 +394,48 @@ export const getUserInfoController = (mongodb) => {
     }
 }
 
-// recive {searchQuery, sortBy, sortByAttributeName }
-// searchQuery is a string to search in the cards all attributes
-// sortby options "alphabetic", "quantity", "attribute"
-
-// return `{filtered_game_cards}` with the filtered and sorted cards
+/**
+ * @swagger
+ * /api/user/cards/search:
+ *   post:
+ *     tags:
+ *       - Carte
+ *     summary: Cerca carte dell'utente
+ *     description: Filtra e ordina le carte dell'utente in base ai criteri specificati
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               searchQuery:
+ *                 type: string
+ *                 description: Query di ricerca per filtrare le carte
+ *               sortBy:
+ *                 type: string
+ *                 enum: [alphabetic, quantity, attribute]
+ *                 description: Metodo di ordinamento delle carte
+ *               sortByAttributeName:
+ *                 type: string
+ *                 description: Nome dell'attributo per l'ordinamento (usato solo se sortBy è "attribute")
+ *     responses:
+ *       200:
+ *         description: Carte filtrate e ordinate con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 filtered_game_cards:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Errore del server
+ */
 export const searchUserCardsController = (mongodb) => {
     return async function searchUserCards(req, res) {
         try {
@@ -522,6 +717,31 @@ export const searchUserCardsController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/cards/missing:
+ *   get:
+ *     tags:
+ *       - Carte
+ *     summary: Ottieni carte mancanti
+ *     description: Recupera la lista delle carte che mancano nella collezione dell'utente
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Carte mancanti recuperate con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 missing:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Errore del server
+ */
 export const getUserMissingCardsController = (mongodb) => {
     return async function getUserMissingCards(req, res) {
         try {
@@ -582,6 +802,31 @@ export const getUserMissingCardsController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/cards/doubles:
+ *   get:
+ *     tags:
+ *       - Carte
+ *     summary: Ottieni carte doppie
+ *     description: Recupera la lista delle carte duplicate nella collezione dell'utente
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Carte doppie recuperate con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 doubles:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       500:
+ *         description: Errore del server
+ */
 export const getUserDoubleCardsController = (mongodb) => {
     return async function getUserDoubleCards(req, res) {
         try {
@@ -613,33 +858,11 @@ export const getUserDoubleCardsController = (mongodb) => {
                 // filter only trades that are open and not expired
                 const openTrades = trades.filter(trade => {
                     const currentTime = new Date();
-                    return  trade.status === 'open';
+                    return trade.expirationDate > currentTime && trade.status === 'open';
                 });
-
-                let filteredDoubleCards = [...doubleCards];
-
-                openTrades.forEach(trade => {
-                    trade.offered_cardIds.forEach(offeredCard => {
-                        const card = doubleCards.find(c => c.id === offeredCard.id);
-                        if (card) {
-                            card.quantity -= 1;
-                            if (card.quantity <= 0) {
-                                filteredDoubleCards = filteredDoubleCards.filter(c => c.id !== card.id);
-                                console.log("[-] Carta rimossa dalle carte doppie perché gia richiesta in uno scambio:", card.name);
-                            }
-                        }
-                    });
-                });
-
-                if (filteredDoubleCards.length === 0) {
-                    console.log("[-] Nessuna carta doppia disponibile per l'utente dopo filtraggio:", user.username);
-                    return res.status(200).send({ message: "Nessuna carta doppia disponibile", doubleCards: [] });
+                if (openTrades.length === 0) {
+                    console.log("[-] Nessun trade aperto trovato per l'utente:", user.username);
                 }
-                console.log("[+] Carte doppie filtrate in base agli scambi aperti:", filteredDoubleCards.length);
-                // Update doubleCards to the filtered ones
-                doubleCards = filteredDoubleCards;
-            } else {
-                console.log("[-] Nessun trade aperto trovato per l'utente:", user.username);
             }
 
             console.log("[+] Carte doppie recuperate con successo:", doubleCards.length);
@@ -655,6 +878,35 @@ export const getUserDoubleCardsController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/update:
+ *   put:
+ *     tags:
+ *       - Utente
+ *     summary: Aggiorna informazioni utente
+ *     description: Modifica le informazioni del profilo dell'utente autenticato
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               username:
+ *                 type: string
+ *               favouriteWizard:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Informazioni utente aggiornate con successo
+ *       404:
+ *         description: Utente non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const updateUserInfoController = (mongodb) => {
     return async function updateUserInfo(req, res) {
         try {
@@ -714,6 +966,24 @@ export const updateUserInfoController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/delete:
+ *   delete:
+ *     tags:
+ *       - Utente
+ *     summary: Elimina account utente
+ *     description: Elimina l'account dell'utente autenticato e tutti i dati associati
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Utente eliminato con successo
+ *       404:
+ *         description: Utente non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const deleteUserController = (mongodb) => {
     return async function deleteUser(req, res) {
         try {
@@ -760,6 +1030,53 @@ export const deleteUserController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/cards/sell:
+ *   post:
+ *     tags:
+ *       - Carte
+ *     summary: Vendi carte
+ *     description: Vende le carte selezionate dell'utente in cambio di crediti
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - cards
+ *             properties:
+ *               cards:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     quantity:
+ *                       type: number
+ *     responses:
+ *       200:
+ *         description: Carte vendute con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 creditsEarned:
+ *                   type: number
+ *       400:
+ *         description: Dati non validi o quantità insufficiente
+ *       404:
+ *         description: Carta non trovata
+ *       500:
+ *         description: Errore del server
+ */
 export const sellUserCardsController = (mongodb) => {
     return async function sellUserCards(req, res) {
         try {
@@ -830,6 +1147,35 @@ export const sellUserCardsController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/cards/package/open:
+ *   post:
+ *     tags:
+ *       - Pacchetti
+ *     summary: Apri un pacchetto di carte
+ *     description: Apre un nuovo pacchetto di carte e aggiunge le carte alla collezione dell'utente
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Pacchetto aperto con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 newCards:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *       400:
+ *         description: Crediti insufficienti
+ *       500:
+ *         description: Errore del server
+ */
 export const openPackageCardsUserController = (mongodb) => {
     return async function openPackageCards(req, res) {
         try {
@@ -895,6 +1241,47 @@ export const openPackageCardsUserController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/credits/buy:
+ *   post:
+ *     tags:
+ *       - Crediti
+ *     summary: Acquista crediti
+ *     description: Aggiunge crediti al saldo dell'utente
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - amount
+ *             properties:
+ *               amount:
+ *                 type: number
+ *                 description: Quantità di crediti da acquistare
+ *     responses:
+ *       200:
+ *         description: Crediti acquistati con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 newBalance:
+ *                   type: number
+ *       400:
+ *         description: Quantità non valida
+ *       404:
+ *         description: Utente non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const buyCreditUserController = (mongodb) => {
     return async function buyCredits(req, res) {
         try {
@@ -938,6 +1325,49 @@ export const buyCreditUserController = (mongodb) => {
     }
 }
 
+/**
+ * @swagger
+ * /api/user/my-trades:
+ *   get:
+ *     tags:
+ *       - Scambi
+ *     summary: Ottieni tutti gli scambi creati dall'utente
+ *     description: Recupera la lista completa degli scambi creati dall'utente autenticato
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista degli scambi recuperata con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 trades:
+ *                   type: array
+ *                   items:
+ *                     type: object
+ *                     properties:
+ *                       _id:
+ *                         type: string
+ *                       userIdOffer:
+ *                         type: object
+ *                         properties:
+ *                           username:
+ *                             type: string
+ *                       offered_cardIds:
+ *                         type: array
+ *                       requested_cardIds:
+ *                         type: array
+ *                       status:
+ *                         type: string
+ *                         enum: [open, completed, cancelled]
+ *                       expirateAt:
+ *                         type: string
+ *                         format: date-time
+ *       500:
+ *         description: Errore del server
+ */
 export const getUserAllTrades = (mongodb) => {
     return async function getUserTrades(req, res) {
         try {

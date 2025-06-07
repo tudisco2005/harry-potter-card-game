@@ -1,10 +1,21 @@
+/**
+ * File principale per l'avvio del server
+ * Questo file gestisce l'inizializzazione del server HTTP e la connessione al database
+ */
+
 import http from "http";
 import dotenv from "dotenv";
 import { initApp } from "./app.js";
 import connectDB from "./database.js";
 
+// Caricamento delle variabili d'ambiente dal file .env
 dotenv.config();
 
+// ==========================================
+// CONFIGURAZIONE DATABASE
+// ==========================================
+
+// Connessione al database MongoDB utilizzando le variabili d'ambiente
 const mongodb = await connectDB(
     process.env.PROTOCOL,
     process.env.MONGO_HOST, 
@@ -13,13 +24,22 @@ const mongodb = await connectDB(
     process.env.MONGO_DATABASE_NAME, 
     String(process.env.MONGO_DATABASE_COLLECTIONS).split(","),
     process.env.MONGO_CONNECTION_OPTIONS
-); // Connect to MongoDB using the provided environment variables
+);
 
-const app = await initApp(mongodb); // Initialize the Express app with the MongoDB connection
-const server = http.createServer(app); // Create an HTTP server using the Express app
+// ==========================================
+// INIZIALIZZAZIONE SERVER
+// ==========================================
+
+// Inizializzazione dell'applicazione Express con la connessione MongoDB
+const app = await initApp(mongodb);
+
+// Creazione del server HTTP utilizzando l'app Express
+const server = http.createServer(app);
+
+// Configurazione della porta del server (default: 3000)
 const PORT = process.env.SERVER_PORT || 3000;
 
-// Start the server and listen on the specified port
+// Avvio del server sulla porta specificata
 server.listen(PORT, () => {
     console.log(`[+] Server avviato e in esecuzione sulla porta: ${PORT}`);
 });

@@ -4,7 +4,7 @@ export async function handle({ event, resolve }) {
     const token = event.cookies.get('authToken');
 
     if (token) {
-        const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/validate`, {
+        const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/token-status`, {
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
@@ -16,7 +16,7 @@ export async function handle({ event, resolve }) {
             event.locals.user = { isAuthenticated: true, token };
 
             // user details
-            const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/allinfo`, {
+            const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/info`, {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'

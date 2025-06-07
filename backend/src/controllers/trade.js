@@ -1,6 +1,68 @@
 import { userModel } from '../models/user.js';
 import { tradeModel } from '../models/trade.js';
 
+/**
+ * @swagger
+ * /api/trade/create:
+ *   post:
+ *     tags:
+ *       - Scambi
+ *     summary: Crea un nuovo scambio
+ *     description: Crea una nuova proposta di scambio di carte
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - offeredCards
+ *               - requestedCards
+ *               - expireTime
+ *             properties:
+ *               offeredCards:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     quantity:
+ *                       type: number
+ *               requestedCards:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     id:
+ *                       type: string
+ *                     quantity:
+ *                       type: number
+ *               expireTime:
+ *                 type: string
+ *                 format: date-time
+ *                 description: Data di scadenza dello scambio
+ *     responses:
+ *       201:
+ *         description: Scambio creato con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 trade:
+ *                   type: object
+ *       400:
+ *         description: Dati non validi o mancanti
+ *       404:
+ *         description: Utente non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const createTradeController = (mongodb) => {
     return async function createTrade(req, res) {
         let userId = req.userId;
@@ -17,11 +79,11 @@ export const createTradeController = (mongodb) => {
         }
         
         const { offeredCards, requestedCards, expireTime } = req.body;
-        console.log("[-] Creazione trade in corso:", offeredCards, requestedCards, expireTime);
+        console.log("[-] Creazione scambio in corso:", offeredCards, requestedCards, expireTime);
         
         if (!offeredCards || !requestedCards || !expireTime) {
-            console.log("[-] Dati di trade incompleti");
-            return res.status(400).send({ message: "Dati di trade incompleti" });
+            console.log("[-] Dati di scambio incompleti");
+            return res.status(400).send({ message: "Dati di scambio incompleti" });
         }
 
         // modifichiamo la quantita delle carte offerte e richieste si puo chiedere e offrire una singola carta per tipo
@@ -44,26 +106,63 @@ export const createTradeController = (mongodb) => {
         try {
             const savedTrade = await trade.save();
             
-            // Aggiungi il trade all'array dei trades dell'utente
+            // Aggiungi il scambio all'array dei scambi dell'utente
             user.trades.push(savedTrade._id);
             await user.save();
 
-            console.log("[-] Trade creato con successo:", savedTrade._id);
+            console.log("[-] Scambio creato con successo:", savedTrade._id);
 
             return res.status(201).send({
-                message: "Trade creato con successo",
+                message: "Scambio creato con successo",
                 trade: savedTrade
             });
         } catch (error) {
-            console.error("[-] Errore durante la creazione del trade:", error);
+            console.error("[-] Errore durante la creazione del scambio:", error);
             return res.status(500).send({ message: "Errore Server" });
         }
     }
 };
 
+/**
+ * @swagger
+ * /api/trade/all:
+ *   get:
+ *     tags:
+ *       - Scambi
+ *     summary: Ottieni tutti gli scambi disponibili
+ *     description: Recupera tutti gli scambi attivi tranne quelli dell'utente autenticato
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista degli scambi recuperata con successo
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   _id:
+ *                     type: string
+ *                   userIdOffer:
+ *                     type: object
+ *                     properties:
+ *                       username:
+ *                         type: string
+ *                   offered_cardIds:
+ *                     type: array
+ *                   requested_cardIds:
+ *                     type: array
+ *                   expirateAt:
+ *                     type: string
+ *                     format: date-time
+ *       500:
+ *         description: Errore del server
+ */
 export const getAllTradesController = (mongodb) => {
     return async function getAllTrades(req, res) {
-        console.log("[-] Recupero tutti i trades in corso tranne i completati o cancellati");
+        console.log("[-] Recupero tutti gli scambi in corso tranne i completati o cancellati");
         
         try {
             const trades = await tradeModel.find({ 
@@ -72,7 +171,7 @@ export const getAllTradesController = (mongodb) => {
                 expirateAt: { $gt: new Date() }
             }).populate('userIdOffer', 'username').populate('userIdBuyer', 'username');
             
-            console.log("[-] Trades recuperati con successo:", trades.length);
+            console.log("[-] Scambi recuperati con successo:", trades.length);
             
             // Converti in array di oggetti plain e aggiungi offererInfo
             const tradesWithOffererInfo = [];
@@ -82,7 +181,7 @@ export const getAllTradesController = (mongodb) => {
                 
                 const userOffer = await userModel.findById(trade.userIdOffer);
                 if (userOffer) {
-                    console.log("[-] Informazioni offerente trovate per il trade:", trade._id);
+                    console.log("[-] Informazioni offerente trovate per il scambio:", trade._id);
                     tradeObj.offererInfo = {
                         username: userOffer.username,
                         userInitials: userOffer.username.split(' ').map(word => word.charAt(0).toUpperCase()).join(''),
@@ -93,7 +192,7 @@ export const getAllTradesController = (mongodb) => {
                             : 0
                     };
                 } else {
-                    console.log("[-] Utente offerente non trovato per il trade:", trade._id);
+                    console.log("[-] Utente offerente non trovato per il scambio:", trade._id);
                     tradeObj.offererInfo = { 
                         username: "Unknown", 
                         userInitials: "UN",
@@ -107,16 +206,50 @@ export const getAllTradesController = (mongodb) => {
             }
 
             return res.status(200).send({
-                message: "Trades recuperati con successo", 
+                message: "Scambi recuperati con successo", 
                 trades: tradesWithOffererInfo 
             });
         } catch (error) {
-            console.error("[-] Errore durante il recupero dei trades:", error);
+            console.error("[-] Errore durante il recupero degli scambi:", error);
             return res.status(500).send({ message: "Errore Server" });
         }
     }
 }
 
+/**
+ * @swagger
+ * /api/trade/accept:
+ *   post:
+ *     tags:
+ *       - Scambi
+ *     summary: Accetta uno scambio
+ *     description: Accetta una proposta di scambio di carte
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tradeId
+ *             properties:
+ *               tradeId:
+ *                 type: string
+ *                 description: ID dello scambio da accettare
+ *     responses:
+ *       200:
+ *         description: Scambio accettato con successo
+ *       400:
+ *         description: Dati non validi o mancanti
+ *       403:
+ *         description: Non autorizzato ad accettare questo scambio
+ *       404:
+ *         description: Scambio non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const acceptTradeController = (mongodb) => {
     return async function acceptTrade(req, res) {
         const { tradeId } = req.body;
@@ -128,8 +261,8 @@ export const acceptTradeController = (mongodb) => {
             const trade = await tradeModel.findOne({ _id: tradeId, userIdOffer: { $ne: userId }, status: "open" });
 
             if (!trade) {
-                console.log("[-] Trade non trovato o cancellato");
-                return res.status(404).send({ message: "Trade non trovato o cancellato" });
+                console.log("[-] Scambio non trovato o cancellato");
+                return res.status(404).send({ message: "Scambio non trovato o cancellato" });
             }
 
 
@@ -212,9 +345,9 @@ export const acceptTradeController = (mongodb) => {
             await trade.save();
 
             console.log("[-] Scambio accettato con successo:", tradeId);
-            return res.status(200).send({ message: "Trade accettato con successo", trade });
+            return res.status(200).send({ message: "Scambio accettato con successo", trade });
         } catch (error) {
-            console.error("[-] Errore durante l'accettazione del trade:", error);
+            console.error("[-] Errore durante l'accettazione del scambio:", error);
             return res.status(500).send({ message: "Errore Server" });
         }
     }
@@ -222,6 +355,38 @@ export const acceptTradeController = (mongodb) => {
     return { acceptTrade };
 }
 
+/**
+ * @swagger
+ * /api/trade/delete:
+ *   delete:
+ *     tags:
+ *       - Scambi
+ *     summary: Elimina uno scambio
+ *     description: Elimina una proposta di scambio di carte
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - tradeId
+ *             properties:
+ *               tradeId:
+ *                 type: string
+ *                 description: ID dello scambio da eliminare
+ *     responses:
+ *       200:
+ *         description: Scambio eliminato con successo
+ *       403:
+ *         description: Non autorizzato ad eliminare questo scambio
+ *       404:
+ *         description: Scambio non trovato
+ *       500:
+ *         description: Errore del server
+ */
 export const deleteTradeController = (mongodb) => {
     return async function deleteTrade(req, res) {
         try {
@@ -236,28 +401,28 @@ export const deleteTradeController = (mongodb) => {
                 return res.status(404).send({ message: "Utente non trovato" });
             }
 
-            //controlla se il trade è dell utente
+            //controlla se il scambio è dell utente
             const { tradeId } = req.body;
             const trade = await tradeModel.findOne({ _id: tradeId, status: "open"});
 
             if (!trade) {
-                console.log("[-] Trade non trovato o gia completato");
-                return res.status(404).send({ message: "Trade non trovato o gia completato" });
+                console.log("[-] Scambio non trovato o gia completato");
+                return res.status(404).send({ message: "Scambio non trovato o gia completato" });
             }
 
             if (trade.userIdOffer.toString() !== req.userId) {
-                console.log("[-] L'utente non è autorizzato a cancellare questo trade");
-                return res.status(403).send({ message: "Non sei autorizzato a cancellare questo trade" });
+                console.log("[-] L'utente non è autorizzato a cancellare questo scambio");
+                return res.status(403).send({ message: "Non sei autorizzato a cancellare questo scambio" });
             }
 
-            // Cancella il trade impostando lo status su "cancelled"
+            // Cancella il scambio impostando lo status su "cancelled"
             trade.status = "cancelled";
             await trade.save();
 
-            console.log("[-] Trade cancellato con successo:", tradeId);
-            return res.status(200).send({ message: "Trade cancellato con successo" });
+            console.log("[-] Scambio cancellato con successo:", tradeId);
+            return res.status(200).send({ message: "Scambio cancellato con successo" });
         } catch (error) {
-            console.error("[-] Errore durante la cancellazione del trade:", error);
+            console.error("[-] Errore durante la cancellazione del scambio:", error);
             return res.status(500).send({ message: "Errore Server" });
         }
     }

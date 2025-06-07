@@ -1,8 +1,19 @@
+/**
+ * File per la configurazione della documentazione Swagger
+ * Questo file definisce la configurazione per la generazione automatica
+ * della documentazione API utilizzando Swagger/OpenAPI
+ */
+
 import swaggerJSDoc from "swagger-jsdoc";
 import dotenv from "dotenv";
 
+// Caricamento delle variabili d'ambiente
 dotenv.config();
 
+/**
+ * Definizione della configurazione Swagger
+ * Contiene tutte le informazioni necessarie per generare la documentazione API
+ */
 const swaggerDefinition = {
     openapi: "3.0.0",
     info: {
@@ -35,12 +46,14 @@ const swaggerDefinition = {
             url: "https://opensource.org/licenses/MIT"
         }
     },
+    // Configurazione dei server disponibili
     servers: [
         {
             url: `http://localhost:${process.env.SERVER_PORT}`,
             description: "Server di sviluppo"
         }
     ],
+    // Definizione dei componenti di sicurezza
     components: {
         securitySchemes: {
             bearerAuth: {
@@ -50,6 +63,7 @@ const swaggerDefinition = {
             }
         }
     },
+    // Definizione dei tag per organizzare gli endpoint
     tags: [
         { name: "Utente", description: "Operazioni gestione utenti" },
         { name: "Crediti", description: "Operazioni sistema crediti" },
@@ -59,10 +73,14 @@ const swaggerDefinition = {
     ]
 };
 
+/**
+ * Opzioni per la generazione della documentazione Swagger
+ */
 const options = {
     swaggerDefinition,
-    apis: ["./src/controllers/*.js"],
+    apis: ["./src/controllers/*.js"], // Percorso dei file contenenti le annotazioni Swagger
 };
 
+// Generazione della specifica Swagger
 const swaggerSpec = swaggerJSDoc(options);
 export default swaggerSpec;

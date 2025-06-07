@@ -8,7 +8,7 @@ export async function POST({ locals, request }) {
         const { quantity } = await request.json();
 
         if (token) {
-            const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/openpackage`, {
+            const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/cards/package/open`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

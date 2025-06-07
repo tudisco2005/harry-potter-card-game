@@ -8,7 +8,7 @@ export async function GET({ locals, request }) {
     request.query = new URL(request.url).searchParams;
     const searchParams = request.query.toString();
 
-    const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/searchcards?${searchParams}`, {
+    const response = await fetch(`${PUBLIC_API_SERVER_URL}/user/cards/search?${searchParams}`, {
         method: 'GET',
         headers: { 
             'Content-Type': 'application/json',
