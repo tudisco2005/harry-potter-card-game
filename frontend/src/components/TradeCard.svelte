@@ -14,6 +14,7 @@
     export let userInitials;
     export let completedTrades = "";
     export let cancelled = false;
+    export let completed = false;
     export let textButton = "Accetta scambio"
 
     function formatExpireTime(expireTime) {
@@ -48,24 +49,9 @@
             >
                 <span class="text-white font-bold text-sm">{userInitials}</span>
             </div>
-            <!-- <div
-                            class="w-10 h-10 bg-gradient-to-br from-green-500 to-teal-500 rounded-full flex items-center justify-center"
-                        >
-                            <span class="text-white font-bold text-sm">LM</span>
-                        </div> -->
-            <!-- <div
-                            class="w-10 h-10 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center"
-                        >
-                            <span class="text-white font-bold text-sm">TC</span>
-                        </div> -->
-            <!-- <div
-                            class="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-500 rounded-full flex items-center justify-center"
-                        >
-                            <span class="text-white font-bold text-sm">SK</span>
-                        </div> -->
             <div>
                 <div class="text-white font-semibold">{username}</div>
-                {#if rating}
+                {#if rating !== ""}
                     <div class="text-sm text-gray-400">⭐ {rating} ({completedTrades} scambi)</div>
                 {/if}
             </div>
@@ -82,7 +68,7 @@
                     new Date(expireTime) - new Date() >= 24 * 60 * 60 * 1000
                 }
             >
-                {cancelled ? "cancellato" : formatExpireTime(expireTime)}
+                {completed ? "Gia completato" : cancelled ? "cancellato" : formatExpireTime(expireTime)}
             </div>
         </div>
     </div>
@@ -140,11 +126,11 @@
             {/if}
         </div>
         <button
-        disabled={(new Date(expireTime) - new Date()) < 0 || cancelled}
+        disabled={(new Date(expireTime) - new Date()) < 0 || cancelled || completed}
         on:click = {acceptTradeClick}
-            class="bg-gradient-to-r {(new Date(expireTime) - new Date()) < 0 || cancelled ? "bg-gray-800" : "from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 hover:scale-105"}  text-white px-4 py-2 rounded-lg font-semibold transition-all transform"
+            class="bg-gradient-to-r {(new Date(expireTime) - new Date()) < 0 || cancelled || completed ? "bg-gray-800" : "from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 hover:scale-105"}  text-white px-4 py-2 rounded-lg font-semibold transition-all transform"
         >
-            {(new Date(expireTime) - new Date()) < 0 ? "Scambio scaduto" : cancelled ? "Scambio cancellato": textButton}
+            {(new Date(expireTime) - new Date()) < 0 ? "Scambio scaduto" : cancelled ? "Scambio cancellato": completed ? "Scambio completato" : textButton}
         </button>
     </div>
 </div>

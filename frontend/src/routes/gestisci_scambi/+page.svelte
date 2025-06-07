@@ -212,6 +212,7 @@
                         tradeId={trade._id}
                         textButton={"Cancella scambio"}
                         cancelled={trade.status === "cancelled"}
+                        completed={trade.status === "completed"}
                         acceptTradeClick={() => {deleteTrade(trade._id)}}
                     />
                 {/each}

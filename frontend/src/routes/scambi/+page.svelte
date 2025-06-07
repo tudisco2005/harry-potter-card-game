@@ -14,31 +14,39 @@
     let askPossibleCard = $state([]);
 
     async function fetchOfferCardsForCreateTrade() {
-        await fetch("/api/doubleCards", { method: "GET", headers: { "Content-Type": "application/json" } }).then(async (response) => {
-            if (!response.ok) {
-                console.error("Errore nel recupero delle carte offerte");
-                return;
-            }
-            const data = await response.json();
-            offerPossibleCard = data.doubleCards; // Assicurati che la risposta abbia un campo 'cards'
-        }).catch((error) => {
-            console.error("Errore di rete:", error);
-        });
+        await fetch("/api/doubleCards", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    console.error("Errore nel recupero delle carte offerte");
+                    return;
+                }
+                const data = await response.json();
+                offerPossibleCard = data.doubleCards; // Assicurati che la risposta abbia un campo 'cards'
+            })
+            .catch((error) => {
+                console.error("Errore di rete:", error);
+            });
     }
 
-    
-
     async function fetchAvailableCardsForCreateTrade() {
-        await fetch("/api/missingCards", { method: "GET", headers: { "Content-Type": "application/json" }}).then(async (response) => {
-            if (!response.ok) {
-                console.error("Errore nel recupero delle carte offerte");
-                return;
-            }
-            const data = await response.json();
-            askPossibleCard = data.missingCards; // Assicurati che la risposta abbia un campo 'cards'
-        }).catch((error) => {
-            console.error("Errore di rete:", error);
-        });
+        await fetch("/api/missingCards", {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    console.error("Errore nel recupero delle carte offerte");
+                    return;
+                }
+                const data = await response.json();
+                askPossibleCard = data.missingCards; // Assicurati che la risposta abbia un campo 'cards'
+            })
+            .catch((error) => {
+                console.error("Errore di rete:", error);
+            });
     }
 
     let createTradeModal = $state(false);
@@ -60,10 +68,11 @@
 
     let allTrades = $state([]);
     let searchQuery = $state("");
-    let allTradesFiltered = $state(allTrades)
+    let allTradesFiltered = $state(allTrades);
 
     // Funzione per aprire il modal di selezione carte da offrire
     function openSelectOfferedCards() {
+        renderLimit = 30; // Resetta il limite di rendering all'apertura del modale
         createTradeModal = false;
         selectOfferedCardsModal = true;
     }
@@ -75,6 +84,7 @@
 
     // Funzione per aprire il modal di selezione carte da chiedere
     function openSelectAskCards() {
+        renderLimit = 30; // Resetta il limite di rendering all'apertura del modale
         createTradeModal = false;
         selectAskCardsModal = true;
     }
@@ -91,64 +101,90 @@
     };
 
     import { onMount, onDestroy } from "svelte";
-    import { browser } from '$app/environment';
+    import { browser } from "$app/environment";
     import { invalidateAll } from "$app/navigation";
 
+    // Sentinel per il caricamento infinito
     let sentinel;
+    let sentinelAskCards;
+    let sentinelOfferedCards;
     let lastScrollY = 0;
 
-    function onScroll() {
+    // Gestore dello scroll per la finestra principale
+    function onWindowScroll() {
         const currentScrollY = window.scrollY;
 
-        // Scrolling down: if the sentinel becomes visible, load more cards
-        if (currentScrollY > lastScrollY && sentinel) {
-            const { top } = sentinel.getBoundingClientRect();
-            if (top < window.innerHeight) {
-                loadMore();
+        // Scrolling down: se la sentinel diventa visibile, carica altre carte
+        if (currentScrollY > lastScrollY) {
+            // Gestisce solo lo scroll della pagina principale, non dei modali
+            if (sentinel) {
+                const { top } = sentinel.getBoundingClientRect();
+                if (top < window.innerHeight) {
+                    loadMore();
+                }
             }
         }
-        // Scrolling up: gestione più intelligente della rimozione delle carte
+        // Scrolling up: gestione per "rimuovere" carte quando si torna su
         else if (currentScrollY < lastScrollY && renderLimit > 30 && sentinel) {
             const scrollDifference = lastScrollY - currentScrollY;
             const { top } = sentinel.getBoundingClientRect();
 
-            // Solo se hai scrollato significativamente verso l'alto E il sentinel è molto lontano
             if (scrollDifference > 200 && top > window.innerHeight * 1.5) {
-                // Rimuovi solo alcune carte, non troppe
                 renderLimit = Math.max(30, renderLimit - 10);
             }
-
-            // Oppure se sei tornato molto in alto nella pagina
             else if (currentScrollY < 100 && renderLimit > 50) {
-                // Reset più graduale quando torni in cima
                 renderLimit = Math.max(50, renderLimit - 20);
             }
         }
 
         lastScrollY = currentScrollY;
     }
+    
+    // Gestore dello scroll per i modali
+    function onModalScroll(event) {
+        const container = event.currentTarget;
+        const containerRect = container.getBoundingClientRect();
+
+        // Controlla quale modale è attivo e usa la sua sentinel specifica
+        if (selectAskCardsModal && sentinelAskCards) {
+            const sentinelRect = sentinelAskCards.getBoundingClientRect();
+            // Se la parte superiore della sentinel è visibile nel container, carica di più
+            if (sentinelRect.top < containerRect.bottom) {
+                loadMore();
+            }
+        } else if (selectOfferedCardsModal && sentinelOfferedCards) {
+            const sentinelRect = sentinelOfferedCards.getBoundingClientRect();
+            // Se la parte superiore della sentinel è visibile nel container, carica di più
+            if (sentinelRect.top < containerRect.bottom) {
+                loadMore();
+            }
+        }
+    }
+
 
     onMount(() => {
         lastScrollY = window.scrollY;
         if (!browser) return;
-        window.addEventListener("scroll", onScroll);
+        // Aggiunge il listener solo per lo scroll della pagina principale
+        window.addEventListener("scroll", onWindowScroll);
 
         // Inizializza le carte offerte e chieste
         getAllTrades();
-        allTradesFiltered = allTrades
+        allTradesFiltered = allTrades;
         fetchAvailableCardsForCreateTrade();
         fetchOfferCardsForCreateTrade();
     });
 
     onDestroy(() => {
         if (!browser) return;
-        window.removeEventListener("scroll", onScroll);
+        // Rimuove il listener per lo scroll della pagina principale
+        window.removeEventListener("scroll", onWindowScroll);
     });
 
     // Stato per le carte selezionate
     let selectedOfferedCards = $state([]);
     let selectedAskCards = $state([]);
-    
+
     function addOfferedCardToSelectedCards(card) {
         return () => {
             if (selectedOfferedCards.includes(card)) {
@@ -178,10 +214,14 @@
 
     async function createTrade(event) {
         event.preventDefault();
-        if (selectedOfferedCards.length === 0 || selectedAskCards.length === 0) {
+        if (
+            selectedOfferedCards.length === 0 ||
+            selectedAskCards.length === 0
+        ) {
             errorBox = true;
             success = false;
-            errorText = "Seleziona almeno una carta da offrire e una da chiedere."
+            errorText =
+                "Seleziona almeno una carta da offrire e una da chiedere.";
             return;
         }
 
@@ -192,8 +232,6 @@
             "5 giorni": 432000000,
         }[expireTime];
 
-        // console.log("Tempo di scadenza in ms:", expireTimeInMs);
-
         if (!expireTimeInMs) {
             errorBox = true;
             success = false;
@@ -201,18 +239,15 @@
             return;
         }
 
-        // Calcola la data di scadenza
         const expireDate = new Date(Date.now() + expireTimeInMs);
 
-        // si puo chiere 1 sola carta per tipo(quantity)
-        // si puo offrire una sola carta per tipo(quantity)
-        selectedOfferedCards.forEach(card => {
+        selectedOfferedCards.forEach((card) => {
             if (card.quantity > 1) {
                 card.quantity = 1;
             }
         });
 
-        selectedAskCards.forEach(card => {
+        selectedAskCards.forEach((card) => {
             card.quantity = 1;
             card.alredyRequested = true;
         });
@@ -227,33 +262,35 @@
                 requestedCards: selectedAskCards,
                 expireTime: expireDate,
             }),
-        }).then(async (response) => {
-            if (!response.ok) {
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    errorBox = true;
+                    success = false;
+                    errorText = "Errore durante la creazione dello scambio.";
+                    return;
+                }
+
+                const { message, trade } = await response.json();
+
+                console.log("Scambio creato con successo!");
+                success = true;
+                errorBox = false;
+                errorText = "";
+                selectedOfferedCards = [];
+                selectedAskCards = [];
+                fetchOfferCardsForCreateTrade();
+                fetchAvailableCardsForCreateTrade();
+                invalidateAll();
+                setTimeout(() => {
+                    createTradeModal = false;
+                }, 200);
+            })
+            .catch((error) => {
                 errorBox = true;
                 success = false;
-                errorText = "Errore durante la creazione dello scambio.";
-                return;
-            }
-
-            const { message, trade } = await response.json();
-
-            console.log("Scambio creato con successo!");
-            success = true;
-            errorBox = false;
-            errorText = "";
-            selectedOfferedCards = [];
-            selectedAskCards = [];
-            fetchOfferCardsForCreateTrade();
-            fetchAvailableCardsForCreateTrade();
-            invalidateAll()
-            setTimeout(() => {
-                createTradeModal = false;
-            }, 200); 
-        }).catch((error) => {
-            errorBox = true;
-            success = false;
-            errorText = "Errore di rete: " + error.message;
-     });
+                errorText = "Errore di rete: " + error.message;
+            });
     }
 
     function resetCreateTradeModal() {
@@ -275,7 +312,7 @@
                 throw new Error("Errore nel recupero degli scambi");
             }
             const data = await response.json();
-            allTrades = data.trades; // Assicurati che la risposta abbia un campo 'trades'
+            allTrades = data.trades;
             allTradesFiltered = data.trades;
             search();
         } catch (error) {
@@ -301,53 +338,67 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ tradeId }),
-        }).then(async (response) => {
-            const data = await response.json();
-            if (!response.ok) {
-                console.error("Errore nell'accettare lo scambio");
-                errorTradeModal = true;
+        })
+            .then(async (response) => {
+                const data = await response.json();
+                if (!response.ok) {
+                    console.error("Errore nell'accettare lo scambio");
+                    errorTradeModal = true;
+                    getAllTrades();
+                    errorTradeMessage = data.message;
+                    return;
+                }
+                errorTradeModal = false;
+                errorTradeMessage = "";
+                console.log("Scambio accettato con successo!", data);
                 getAllTrades();
-                errorTradeMessage = data.message;
-                return;
-            }
-            errorTradeModal = false;
-            errorTradeMessage = "";
-            console.log("Scambio accettato con successo!", data);
-            getAllTrades();
-            invalidateAll();
-        }).catch((error) => {
-            errorTradeModal = true;
-            errorTradeMessage = "Errore durante l'accettazione dello scambio: " + error.message;
-            console.error("Errore di rete:", error);
-        });
+                invalidateAll();
+            })
+            .catch((error) => {
+                errorTradeModal = true;
+                errorTradeMessage =
+                    "Errore durante l'accettazione dello scambio: " +
+                    error.message;
+                console.error("Errore di rete:", error);
+            });
     }
 
-    let sortBy = $state("recent")
+    let sortBy = $state("recent");
     function search() {
-        console.log(allTradesFiltered)
+        console.log(allTradesFiltered);
         searchQuery = searchQuery.trim();
         if (!searchQuery) {
             allTradesFiltered = allTrades;
         } else {
-            allTradesFiltered = allTrades.filter(trade => {
-                return trade.offererInfo.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                       trade.offered_cardIds.some(card => card.name.toLowerCase().includes(searchQuery.toLowerCase()));
+            allTradesFiltered = allTrades.filter((trade) => {
+                return (
+                    trade.offererInfo.username
+                        .toLowerCase()
+                        .includes(searchQuery.toLowerCase()) ||
+                    trade.offered_cardIds.some((card) =>
+                        card.name
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()),
+                    )
+                );
             });
         }
 
         // sort
-        if(sortBy == "recent") {
-            // sort trades by createdAt descending (most recent first)
-            allTradesFiltered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        if (sortBy == "recent") {
+            allTradesFiltered.sort(
+                (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
+            );
         } else {
-            // sort trades by expirateAt ascending (earlier expiration first)
-            allTradesFiltered.sort((a, b) => new Date(a.expirateAt) - new Date(b.expirateAt));
+            allTradesFiltered.sort(
+                (a, b) => new Date(a.expirateAt) - new Date(b.expirateAt),
+            );
         }
     }
 </script>
 
 {#if errorTradeModal}
-<div
+    <div
         class="fixed inset-0 bg-opacity-50 z-50 flex items-center justify-center p-4"
         on:click={() => (errorTradeModal = false)}
     >
@@ -388,9 +439,7 @@
             </div>
 
             <!-- Contenuto scorrevole del modale -->
-            <div
-                class="p-6 text-white"
-            >
+            <div class="p-6 text-white">
                 {errorTradeMessage}
             </div>
         </div>
@@ -456,7 +505,10 @@
                 >
                     {#each dettailCards as card}
                         <div class="w-full max-w-xs">
-                            <CharacterCard quantity={card.quantity} content={card} />
+                            <CharacterCard
+                                quantity={card.quantity}
+                                content={card}
+                            />
                         </div>
                     {/each}
                 </div>
@@ -571,14 +623,17 @@
                             class="p-4 mb-4 text-sm text-red-800 bg-red-50 rounded-lg dark:bg-red-200 dark:text-red-800"
                             role="alert"
                         >
-                            <span class="font-medium">Errore!</span> {errorText}
+                            <span class="font-medium">Errore!</span>
+                            {errorText}
                         </div>
                     {/if}
                     <button
-                    disabled={success}
-                    on:click={createTrade}
+                        disabled={success}
+                        on:click={createTrade}
                         type="submit"
-                        class="text-white inline-flex items-center {success ? 'bg-green-600 ' : ' dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 bg-primary-700 hover:bg-primary-800'} focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center "
+                        class="text-white inline-flex items-center {success
+                            ? 'bg-green-600 '
+                            : ' dark:bg-primary-600 dark:hover:bg-primary-700 dark:focus:ring-primary-800 bg-primary-700 hover:bg-primary-800'} focus:ring-4 focus:outline-none focus:ring-primary-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center"
                     >
                         <svg
                             class="mr-1 -ml-1 w-6 h-6"
@@ -591,7 +646,9 @@
                                 clip-rule="evenodd"
                             ></path></svg
                         >
-                        {success ? "Scambio creato con successo" : 'Crea Scambio'}
+                        {success
+                            ? "Scambio creato con successo"
+                            : "Crea Scambio"}
                     </button>
                 </div>
             </form>
@@ -646,7 +703,7 @@
             </div>
 
             <!-- Contenuto scorrevole del modale -->
-            <div class="flex-1 overflow-y-auto p-4">
+            <div class="flex-1 overflow-y-auto p-4" on:scroll={onModalScroll}>
                 <div
                     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
                 >
@@ -673,13 +730,18 @@
                     {/each}
 
                     <!-- Sentinel element to detect scroll position -->
-                    <div bind:this={sentinel} class="col-span-full h-1"></div>
+                    <div
+                        bind:this={sentinelOfferedCards}
+                        class="col-span-full h-1"
+                    ></div>
                 </div>
             </div>
 
             <!-- Bottone OK centrato in basso al modal -->
             {#if selectedOfferedCards.length > 0}
-                <div class="flex justify-center p-4 border-t dark:border-gray-600 flex-shrink-0">
+                <div
+                    class="flex justify-center p-4 border-t dark:border-gray-600 flex-shrink-0"
+                >
                     <button
                         type="button"
                         class="bg-blue-600 text-white text-sm font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 text-lg transition-colors"
@@ -741,7 +803,7 @@
             </div>
 
             <!-- Contenuto scorrevole del modale -->
-            <div class="flex-1 overflow-y-auto p-4">
+            <div class="flex-1 overflow-y-auto p-4" on:scroll={onModalScroll}>
                 <div
                     class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4"
                 >
@@ -769,13 +831,18 @@
                     {/each}
 
                     <!-- Sentinel element to detect scroll position -->
-                    <div bind:this={sentinel} class="col-span-full h-1"></div>
+                    <div
+                        bind:this={sentinelAskCards}
+                        class="col-span-full h-1"
+                    ></div>
                 </div>
             </div>
 
             <!-- Bottone OK centrato in basso al modal -->
             {#if selectedAskCards.length > 0}
-                <div class="flex justify-center p-4 border-t dark:border-gray-600 flex-shrink-0">
+                <div
+                    class="flex justify-center p-4 border-t dark:border-gray-600 flex-shrink-0"
+                >
                     <button
                         type="button"
                         class="bg-blue-600 text-white text-sm font-semibold py-3 px-6 rounded-lg shadow-lg hover:bg-blue-700 text-lg transition-colors"
@@ -838,7 +905,7 @@
                         <select
                             on:click={search}
                             bind:value={sortBy}
-                            class="w-full bg-gray-800/50 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-yellow-400 focus:outline-none"
+                            class="w-full bg-gray-800/50 border mr-3 border-gray-600 rounded-lg px-4 py-3 text-white focus:border-yellow-400 focus:outline-none"
                         >
                             <option value="recent">Più recenti</option>
                             <option value="expire">Scadenza</option>
@@ -882,17 +949,22 @@
             <div class="flex flex-wrap gap-2 items-center">
                 <span class="text-sm text-gray-300">Filtri rapidi:</span>
                 <button
-                    on:click={() => { searchQuery = ""; search(); }}
+                    on:click={() => {
+                        searchQuery = "";
+                        search();
+                    }}
                     class="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors"
                 >
                     Tutti
                 </button>
                 <button
                     on:click={() => {
-                        allTradesFiltered = allTrades.filter(trade =>
-                            trade.offered_cardIds.some(card =>
-                                askPossibleCard.some(missing => missing.id === card.id)
-                            )
+                        allTradesFiltered = allTrades.filter((trade) =>
+                            trade.offered_cardIds.some((card) =>
+                                askPossibleCard.some(
+                                    (missing) => missing.id === card.id,
+                                ),
+                            ),
                         );
                     }}
                     class="px-3 py-1 bg-purple-500/20 text-purple-400 rounded-full text-sm border border-purple-500/30 hover:bg-purple-500/30 transition-colors"
@@ -918,8 +990,14 @@
         <div class="grid lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {#each allTradesFiltered.slice(0, renderLimit) as trade}
                 <TradeCard
-                    offeredCardsClick={() => {dettailCards = trade.offered_cardIds; offeredCardsClick()}}
-                    askCardsClick={() => {dettailCards = trade.requested_cardIds; askCardsClick()}}
+                    offeredCardsClick={() => {
+                        dettailCards = trade.offered_cardIds;
+                        offeredCardsClick();
+                    }}
+                    askCardsClick={() => {
+                        dettailCards = trade.requested_cardIds;
+                        askCardsClick();
+                    }}
                     offeredCards={trade.offered_cardIds}
                     askCards={trade.requested_cardIds}
                     expireTime={trade.expirateAt}
@@ -932,6 +1010,8 @@
                 />
             {/each}
         </div>
+        <!-- Sentinel per lo scroll della pagina principale -->
+        <div bind:this={sentinel} class="h-1"></div>
     </section>
 </div>
 

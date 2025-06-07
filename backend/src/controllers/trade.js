@@ -238,11 +238,11 @@ export const deleteTradeController = (mongodb) => {
 
             //controlla se il trade è dell utente
             const { tradeId } = req.body;
-            const trade = await tradeModel.findOne({ _id: tradeId });
+            const trade = await tradeModel.findOne({ _id: tradeId, status: "open"});
 
             if (!trade) {
-                console.log("[-] Trade non trovato");
-                return res.status(404).send({ message: "Trade non trovato" });
+                console.log("[-] Trade non trovato o gia completato");
+                return res.status(404).send({ message: "Trade non trovato o gia completato" });
             }
 
             if (trade.userIdOffer.toString() !== req.userId) {

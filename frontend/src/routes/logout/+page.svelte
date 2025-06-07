@@ -10,10 +10,7 @@
 
       if (response.ok) {
         await invalidateAll();
-        // Wait a moment then redirect
-        setTimeout(() => {
-          goto('/');
-        }, 2000);
+        goto('/');
       } else {
         console.error('Logout failed');
       }

@@ -743,6 +743,14 @@ export const deleteUserController = (mongodb) => {
 
             console.log("[+] Token utente appena eliminato messo in blacklist")
 
+            //delete all trades
+            await tradeModel.deleteMany({ userIdOffer: req.userId }).catch((error) => {
+                console.error("[-] Errore durante l'eliminazione dei trade dell'utente:", error);
+                return res.status(500).send({ message: "Errore Server" });
+            });
+
+            console.log("[+] Trade dell'utente eliminati con successo");
+            
             console.log("[+] Utente eliminato con successo");
             res.status(200).send({ message: "Utente eliminato con successo" });
         } catch (error) {
