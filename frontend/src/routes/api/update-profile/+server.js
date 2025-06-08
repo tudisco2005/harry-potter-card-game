@@ -21,13 +21,22 @@ export async function POST({ request, locals }) {
                 })
             });
             
-            const { message } = await response.json();
-
-            if (!response.ok) {
-                return json({ message }, { status: response.status });
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                return json({ message: 'Errore nel parsing della risposta dal server' }, { status: 500 });
             }
 
-            return json({ message });
+            const { message } = data;
+
+            if (!response.ok) {
+                return json({ message: message || 'Errore durante l\'aggiornamento' }, { status: response.status });
+            }
+
+            return json({ message: message || 'Profilo aggiornato con successo' });
+        } else {
+            return json({ message: 'Token mancante' }, { status: 401 });
         }
     } catch (error) {
         console.error('Edit error:', error);

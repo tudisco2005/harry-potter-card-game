@@ -74,6 +74,13 @@ export const createUserController = () => {
             return res.status(400).send({ message: "Il nome utente non può contenere '@'" });
         }
 
+        // Validate email format
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!emailRegex.test(email)) {
+            console.log("[-] Registrazione fallita: Formato email non valido");
+            return res.status(400).send({ message: "Formato email non valido" });
+        }
+
         // - check password rules(min 8, 1 uppercase, 1 lowercase, 1 number)
         const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
         if (!passwordRegex.test(password)) {

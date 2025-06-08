@@ -66,9 +66,19 @@ async function connectDB(protocol, host, username, password, dbName, collectionN
 
         return mongodb;
     } catch (error) {
-        // Gestione degli errori di connessione
-        console.error("Errore durante la connessione a MongoDB:", error);
-        process.exit(1);
+        // Gestione dettagliata degli errori di connessione
+        if (error.name === 'MongoServerError') {
+            if (error.code === 18) {
+                console.error("[-] MongoDB: errore di autenticazione: Credenziali non valide");
+                throw new Error("Credenziali database non valide");
+            } else if (error.code === 6) {
+                console.error("[-] MongoDB: errore di connessione: Host non raggiungibile");
+                throw new Error("Impossibile connettersi al server database");
+            }
+        }
+        
+        console.error("[-] MongoDB: errore durante la connessione:", error.message);
+        throw new Error(`Errore di connessione al database: ${error.message}`);
     }
 }
 

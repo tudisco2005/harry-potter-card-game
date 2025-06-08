@@ -16,13 +16,21 @@ export async function GET({ locals }) {
                     },
                 });
     
-                if (!response.ok) {
-                    return json({ message: 'Error fetching missing cards' }, { status: response.status });
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    return json({ message: 'Errore nel parsing della risposta dal server' }, { status: 500 });
                 }
-    
-                const { message, missingCards } = await response.json();
-    
-                return json({ message, missingCards });
+
+                if (!response.ok) {
+                    return json({ message: data.message || 'Error fetching missing cards' }, { status: response.status });
+                }
+
+                const { message, missingCards } = data;
+                return json({ message: message || 'Operazione completata', missingCards });
+            } else {
+                return json({ message: 'Token mancante' }, { status: 401 });
             }
     
         } catch (error) {

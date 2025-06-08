@@ -16,13 +16,21 @@ export async function GET({ locals }) {
                     },
                 });
     
-                if (!response.ok) {
-                    return json({ message: 'Error fetching double cards' }, { status: response.status });
+                let data;
+                try {
+                    data = await response.json();
+                } catch (e) {
+                    return json({ message: 'Errore nel parsing della risposta dal server' }, { status: 500 });
                 }
 
-                const { message, doubleCards } = await response.json();
+                if (!response.ok) {
+                    return json({ message: data.message || 'Error fetching double cards' }, { status: response.status });
+                }
 
-                return json({ message, doubleCards });
+                const { message, doubleCards } = data;
+                return json({ message: message || 'Operazione completata', doubleCards });
+            } else {
+                return json({ message: 'Token mancante' }, { status: 401 });
             }
     
         } catch (error) {

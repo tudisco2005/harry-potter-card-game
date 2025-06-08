@@ -14,14 +14,21 @@ export async function POST({ cookies, locals }) {
                 }
             });
 
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                return json({ message: 'Errore nel parsing della risposta dal server' }, { status: 500 });
+            }
+
             if (!response.ok) {
-                return json({ message: 'Error logging out' }, { status: response.status });
+                return json({ message: data.message || 'Error logging out' }, { status: response.status });
             }
 
             // Delete the authToken cookie
             cookies.delete('authToken', { path: '/' });
 
-            return json({ message: 'Logged out successfully' });
+            return json({ message: data.message || 'Logged out successfully' });
         }
 
         return json({ message: 'Already logged out' });

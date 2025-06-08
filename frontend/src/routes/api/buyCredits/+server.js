@@ -18,13 +18,21 @@ export async function POST({ locals, request }) {
                 body: JSON.stringify({ amount })
             });
 
-            if (!response.ok) {
-                return json({ message: 'Error buying credits' }, { status: response.status });
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                return json({ message: 'Errore nel parsing della risposta dal server' }, { status: 500 });
             }
 
-            const { message, newBalance } = await response.json();
+            if (!response.ok) {
+                return json({ message: data.message || 'Error buying credits' }, { status: response.status });
+            }
 
-            return json({ message , newBalance });
+            const { message, newBalance } = data;
+            return json({ message: message || 'Acquisto effettuato', newBalance });
+        } else {
+            return json({ message: 'Token mancante' }, { status: 401 });
         }
         
     } catch (error) {

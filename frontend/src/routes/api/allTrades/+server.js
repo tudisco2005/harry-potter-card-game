@@ -14,19 +14,24 @@ export async function GET({ locals, request }) {
                     'Accept': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-
             });
 
-            if (!response.ok) {
-                return json({ message: 'Error creating trade' }, { status: response.status });
+            let data;
+            try {
+                data = await response.json();
+            } catch (e) {
+                return json({ message: 'Errore nel parsing della risposta dal server' }, { status: 500 });
             }
 
-            
-            const { message, trades } = await response.json();
+            if (!response.ok) {
+                return json({ message: data.message || 'Error creating trade' }, { status: response.status });
+            }
 
-            return json({ message, trades });
+            const { message, trades } = data;
+            return json({ message: message || 'Operazione completata', trades });
+        } else {
+            return json({ message: 'Token mancante' }, { status: 401 });
         }
-
     } catch (error) {
         console.error('Trade creation error:', error);
         return json({ message: 'Server error' }, { status: 500 });
