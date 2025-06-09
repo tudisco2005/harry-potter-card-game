@@ -1,4 +1,4 @@
-# Marvel Card Game
+# Hogwars Card Game
 
 Un'applicazione web per giocare a carte con i personaggi di Hogwars. Il progetto è composto da un backend Node.js/Express e un frontend SvelteKit.
 
@@ -88,7 +88,7 @@ npm install
 ```bash
 npm run dev
 ```
-
+5. Sara necessario registrare un nuovo utente
 
 ## Tecnologie Utilizzate
 

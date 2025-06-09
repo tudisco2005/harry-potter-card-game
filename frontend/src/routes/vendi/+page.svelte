@@ -125,7 +125,7 @@
             >
 
             <span class="p-2 my-2 bg-gray-400 rounded-xl text-black"
-                >2 Doppioni = 1 Credito</span
+                >2 Doppioni Uguali = 1 Credito</span
             >
             <span class="text-sm text-gray-500 dark:text-gray-400"
                 >Seleziona le carte che vuoi vendere:</span

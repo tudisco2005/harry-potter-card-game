@@ -13,10 +13,15 @@
         event.preventDefault();
         if (password !== confirmPassword) {
             errorPsw = "Le password non corrispondono";
+            return;
         } else if (password.length < 8) {
             errorPsw = "La password deve essere lunga almeno 8 caratteri";
+            return;
+            
         } else if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
             errorPsw = "La password deve contenere almeno una lettera maiuscola, una minuscola e un numero";
+            return;
+            
         } else {
             errorPsw = "";
         }
@@ -39,6 +44,7 @@
                 // Redirect to login page on success after 1.2 seconds
                 success = true;
                 error = ""
+                errorPsw = "";
                 setTimeout(() => {
                     window.location.href = '/login';
                 }, 1200);

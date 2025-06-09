@@ -39,7 +39,13 @@
     })
     let successMessage = $state("");
     let success = $state(false)
-    async function buyCredits() {
+    async function buyCredits(event) {
+        event.preventDefault(); // Previene il comportamento predefinito del form
+        if (amountTobuy <= 0) {
+            success = false;
+            successMessage = "Seleziona una quantità valida";
+            return;
+        }
         // Logica per acquistare crediti
         await fetch("/api/buyCredits", {
             method: "POST",
