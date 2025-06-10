@@ -1,6 +1,11 @@
 // user model
 import mongoose from 'mongoose';
 
+// Schema per la bacchetta magica
+// - legno: stringa, valore predefinito stringa vuota
+// - nucleo: stringa, valore predefinito stringa vuota
+// - lunghezza: numero, valore predefinito null
+// _id: false impedisce la creazione automatica dell'ID per questo sotto-schema
 const wandSchema = new mongoose.Schema({
   wood: {
     type: String,
@@ -176,9 +181,10 @@ const userSchema = new mongoose.Schema({
         type: [gameCardSchema],
         default: []
     },
+    // non contiene direttamente gli oggetti trade ma solo gli id
     trades: {
-        type: [String],
-        default: []
+      type: [String],
+      default: []
     }
 });
 

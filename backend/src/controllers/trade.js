@@ -3,24 +3,26 @@ import { tradeModel } from '../models/trade.js';
 
 // Costanti per gli stati degli scambi
 const TRADE_STATUS = {
-    ACTIVE: 'open',
-    COMPLETED: 'completed',
-    CANCELLED: 'cancelled',
-    EXPIRED: 'expired'
+    ACTIVE: 'open',             // scambio attivo e disponibile
+    COMPLETED: 'completed',     // scambio completato con successo
+    CANCELLED: 'cancelled',     // scambio annullato dall'utente
+    EXPIRED: 'expired'          // scambio scaduto automaticamente
 };
 
-
+// Funzione per validare i dati di input di uno scambio
 const validateTradeInput = (offeredCards, requestedCards, expireTime) => {
     const errors = [];
-    
+
+    // Verifica che ci siano carte offerte e richieste
     if (!offeredCards?.length || !requestedCards?.length) {
         errors.push("Devi offrire e richiedere almeno una carta");
     }
-    
+
+    // Verifica che la data di scadenza sia valida
     if (!expireTime || isNaN(new Date(expireTime).getTime())) {
         errors.push("Data di scadenza non valida");
     }
-    
+
     return errors;
 };
 
@@ -91,7 +93,8 @@ export const createTradeController = () => {
         try {
             const userId = req.userId;
             console.log("[-] Recupero informazioni utente in corso:", userId);
-            
+
+            // Verifica che l'utente esista
             const user = await userModel.findOne({ _id: userId });
             if (!user) {
                 console.log("[-] Utente non trovato");
@@ -101,18 +104,18 @@ export const createTradeController = () => {
             const { offeredCards, requestedCards, expireTime } = req.body;
             console.log("[-] Creazione scambio in corso...");
 
-            // Validazione input
+            // Validazione dei dati di input
             const validationErrors = validateTradeInput(offeredCards, requestedCards, expireTime);
             if (validationErrors.length > 0) {
                 console.log("[-] Dati di scambio non validi:", validationErrors[0]);
                 return res.status(400).send({ message: validationErrors[0] });
             }
 
-            // Normalizzazione quantità carte
+            // Normalizzazione delle quantità delle carte (impostate a 1)
             const normalizedOfferedCards = offeredCards.map(card => ({ ...card, quantity: 1 }));
             const normalizedRequestedCards = requestedCards.map(card => ({ ...card, quantity: 1 }));
 
-            // Creazione scambio
+            // Creazione del nuovo scambio nel database
             const trade = new tradeModel({
                 userIdOffer: userId,
                 offered_cardIds: normalizedOfferedCards,
@@ -121,6 +124,7 @@ export const createTradeController = () => {
                 status: TRADE_STATUS.ACTIVE
             });
 
+            // Salvataggio dello scambio e aggiornamento dell'utente
             const savedTrade = await trade.save();
             user.trades.push(savedTrade._id);
             await user.save();
@@ -187,36 +191,47 @@ export const createTradeController = () => {
 export const getAllTradesController = () => {
     return async function getAllTrades(req, res) {
         console.log("[-] Recupero tutti gli scambi in corso tranne i completati o cancellati");
-        
+
         try {
-            const trades = await tradeModel.find({ 
+            // Recupera tutti gli scambi attivi escludendo quelli dell'utente corrente
+            const trades = await tradeModel.find({
                 status: { $in: [TRADE_STATUS.ACTIVE] },
                 userIdOffer: { $ne: req.userId },
                 expirateAt: { $gt: new Date() }
             }).populate('userIdOffer', 'username').populate('userIdBuyer', 'username');
 
             console.log("[-] Scambi recuperati con successo:", trades.length);
-            
+
+            // Aggiunge informazioni aggiuntive per ogni scambio
             const tradesWithOffererInfo = await Promise.all(trades.map(async (trade) => {
                 const tradeObj = trade.toObject();
                 const userOffer = await userModel.findById(trade.userIdOffer);
-                
+
                 if (userOffer) {
                     console.log("[-] Informazioni offerente trovate per lo scambio:", trade._id);
-                    const completedTrades = userOffer.trades.filter(t => t.status === TRADE_STATUS.COMPLETED).length;
+
+                    // Recupera gli scambi completati dell'utente
+                    const userTrades = await tradeModel.find({ 
+                        userIdOffer: userOffer._id,
+                        status: TRADE_STATUS.COMPLETED 
+                    });
+                    const completedTrades = userTrades.length;
+                    const totalTrades = await tradeModel.countDocuments({ userIdOffer: userOffer._id });
+                    
+                    // Calcola le statistiche dell'offerente
                     tradeObj.offererInfo = {
                         username: userOffer.username,
                         userInitials: userOffer.username.split(' ').map(word => word.charAt(0).toUpperCase()).join(''),
-                        totalTrades: userOffer.trades.length,
+                        totalTrades: totalTrades,
                         completedTrades,
-                        rating: userOffer.trades.length > 0 ? (completedTrades / userOffer.trades.length) * 5 : 0
+                        rating: (totalTrades > 0 ? (completedTrades / totalTrades) * 5 : 0).toFixed(1)
                     };
                 } else {
                     console.log("[-] Utente offerente non trovato per lo scambio:", trade._id);
                     res.status(404).send({ message: "Utente offerente non trovato" });
                     return null; // Salta questo scambio se l'offerente non è trovato
                 }
-                
+
                 return tradeObj;
             }));
 
@@ -283,6 +298,7 @@ export const acceptTradeController = () => {
         console.log("[-] Accettazione Scambio in corso:", tradeId);
 
         try {
+            // Verifica che lo scambio esista e sia attivo
             const trade = await tradeModel.findOne({ _id: tradeId, userIdOffer: { $ne: userId }, status: "open" });
 
             if (!trade) {
@@ -290,12 +306,11 @@ export const acceptTradeController = () => {
                 return res.status(404).send({ message: "Scambio non trovato o cancellato" });
             }
 
-
-            // modifica le carte degli utenti coinvolti
+            // Recupera gli utenti coinvolti nello scambio
             const userOffer = await userModel.findOne({ _id: trade.userIdOffer });
             const userBuyer = await userModel.findOne({ _id: userId });
 
-            if(!userOffer) {
+            if (!userOffer) {
                 console.log("[-] Utente offerente non trovato");
                 return res.status(404).send({ message: "Utente offerente o compratore non trovato" });
             }
@@ -311,57 +326,58 @@ export const acceptTradeController = () => {
                 const existingCard = userOffer.game_cards.find(c => c.id === card.id);
                 if (existingCard) {
                     if (existingCard.quantity < card.quantity) {
-                        console.log("[-] Quantità insufficiente per la carta:", card.id);
-                        return res.status(400).send({ message: "Quantità offerta insufficiente per la carta: " + card.id });
+                        console.log("[-] Quantità insufficiente per la carta:", card.id, card.name);
+                        return res.status(400).send({ message: "Quantità offerta insufficiente per la carta: " + card.name });
                     }
                     console.log("[-] Offerente: Rimuovo carta offerta:", card.id, "Quantità:", card.quantity);
                     existingCard.quantity -= card.quantity;
                 } else {
-                    console.log("[-] Carta offerta non trovata:", card.id);
-                    return res.status(404).send({ message: "Carta offerta non trovata: " + card.id });
+                    console.log("[-] Carta offerta non trovata:", card.id, card.name);
+                    return res.status(404).send({ message: "Carta offerta non trovata: " + card.name });
                 }
             }
 
-            // Rimuovi le carte richieste dall'utente compratore modificando la quantità posseduta
+            // Rimuove le carte richieste dall'utente compratore
             for (const card of trade.requested_cardIds) {
                 const existingCard = userBuyer.game_cards.find(c => c.id === card.id);
                 if (existingCard) {
                     if (existingCard.quantity < card.quantity) {
-                        console.log("[-] Quantità insufficiente per la carta richiesta:", card.id);
-                        return res.status(400).send({ message: "Quantità insufficiente per la carta richiesta: " + card.id });
+                        console.log("[-] Quantità insufficiente per la carta richiesta:", card.id, card.name);
+                        return res.status(400).send({ message: "Quantità insufficiente per la carta richiesta: " + card.name });
                     }
                     console.log("[-] Compratore: Rimuovo carta richiesta:", card.id, "Quantità:", card.quantity);
                     existingCard.quantity -= card.quantity;
                 } else {
-                    console.log("[-] Carta richiesta non trovata:", card.id);
-                    return res.status(404).send({ message: "Carta richiesta non trovata: " + card.id });
+                    console.log("[-] Carta richiesta non trovata:", card.id, card.name);
+                    return res.status(404).send({ message: "Carta richiesta non trovata: " + card.name });
                 }
             }
 
-            // Aggiungi le carte offerte all'utente compratore modificando la quantità posseduta
+            // Aggiunge le carte offerte all'utente compratore
             for (const card of trade.offered_cardIds) {
                 const existingCard = userBuyer.game_cards.find(c => c.id === card.id);
                 if (existingCard) {
                     console.log("[-] Compratore: Aggiungo carta offerta:", card.id, "Quantità:", card.quantity);
                     existingCard.quantity += card.quantity;
                 } else {
-                    console.log("[-] Carta offerta non trovata per l'utente compratore:", card.id);
-                    return res.status(404).send({ message: "Carta offerta non trovata per l'utente compratore: " + card.id });
+                    console.log("[-] Carta offerta non trovata per l'utente compratore:", card.id, card.name);
+                    return res.status(404).send({ message: "Carta offerta non trovata per l'utente compratore: " + card.name });
                 }
             }
 
-            // Aggiungi le carte richieste all'utente offerente modificando la quantità posseduta
+            // Aggiunge le carte richieste all'utente offerente
             for (const card of trade.requested_cardIds) {
-                const existingCard = userOffer.game_cards.find(c => c.id === card.id);
+                const existingCard = userOffer.game_cards.find(c => c.id === card.id, card.name);
                 if (existingCard) {
                     console.log("[-] Offerente: Aggiungo carta richiesta:", card.id, "Quantità:", card.quantity);
                     existingCard.quantity += card.quantity;
                 } else {
-                    console.log("[-] Carta richiesta non trovata per l'utente offerente:", card.id);
-                    return res.status(404).send({ message: "Carta richiesta non trovata per l'utente offerente: " + card.id });
+                    console.log("[-] Carta richiesta non trovata per l'utente offerente:", card.id, card.name);
+                    return res.status(404).send({ message: "Carta richiesta non trovata per l'utente offerente: " + card.name });
                 }
             }
-            // Salva le modifiche agli utenti
+
+            // Aggiorna lo stato dello scambio e salva le modifiche
             trade.userIdBuyer = userId;
             trade.status = "completed";
 
@@ -376,9 +392,7 @@ export const acceptTradeController = () => {
             return res.status(500).send({ message: "Errore Server" });
         }
     }
-
-    return { acceptTrade };
-}
+};
 
 /**
  * @swagger
@@ -422,10 +436,10 @@ export const acceptTradeController = () => {
 export const deleteTradeController = () => {
     return async function deleteTrade(req, res) {
         try {
-            // Recupera le informazioni dell'utente dal database
+            // Recupera l'utente dal database
             const user = await userModel.findOne({ _id: req.userId }).catch((error) => {
                 console.error("[-] Errore durante il recupero dell'utente:", error);
-                throw error; // Rilancia l'errore invece di inviare la risposta qui
+                throw error;
             });
 
             if (!user) {
@@ -433,15 +447,16 @@ export const deleteTradeController = () => {
                 return res.status(404).send({ message: "Utente non trovato" });
             }
 
-            //controlla se il scambio è dell utente
+            // Verifica che lo scambio esista e sia attivo
             const { tradeId } = req.body;
-            const trade = await tradeModel.findOne({ _id: tradeId, status: "open"});
+            const trade = await tradeModel.findOne({ _id: tradeId, status: "open" });
 
             if (!trade) {
                 console.log("[-] Scambio non trovato o gia completato");
                 return res.status(404).send({ message: "Scambio non trovato o gia completato" });
             }
 
+            // Verifica che l'utente sia autorizzato a cancellare lo scambio
             if (trade.userIdOffer.toString() !== req.userId) {
                 console.log("[-] L'utente non è autorizzato a cancellare questo scambio");
                 return res.status(403).send({ message: "Non sei autorizzato a cancellare questo scambio" });
@@ -458,7 +473,7 @@ export const deleteTradeController = () => {
             return res.status(500).send({ message: "Errore Server" });
         }
     }
-}
+};
 
 /**
  * @swagger
@@ -504,17 +519,17 @@ export const searchTradesController = () => {
             let query = {};
             let sort = {};
 
-            // Query base per scambi attivi
+            // Query base per gli scambi attivi
             const baseQuery = {
                 status: { $in: [TRADE_STATUS.ACTIVE] },
                 userIdOffer: { $ne: req.userId },
                 expirateAt: { $gt: new Date() }
             };
 
-            // Aggiungi filtri di ricerca se presenti
+            // Aggiunge filtri di ricerca se presenti
             if (searchQuery && searchQuery.trim()) {
-                const searchRegex = new RegExp(searchQuery.trim(), 'i'); // Case-insensitive search
-                
+                const searchRegex = new RegExp(searchQuery.trim(), 'i');
+
                 // Cerca negli scambi dove almeno una carta offerta ha un nome che corrisponde alla query
                 query = {
                     ...baseQuery,
@@ -533,37 +548,36 @@ export const searchTradesController = () => {
                 console.log("[-] Nessuna query di ricerca fornita, recupero tutti gli scambi attivi");
             }
 
-            // Costruisci l'ordinamento
+            // Imposta l'ordinamento dei risultati
             if (sortBy === 'recent') {
-                sort = { expirateAt: -1 }; // Ascending order for expiration date
+                sort = { expirateAt: -1 };
             } else if (sortBy === 'expiring') {
-                sort = { expirateAt: 1 }; // Ascending order for expiration date
+                sort = { expirateAt: 1 };
             } else {
-                // Ordinamento di default per creazione recente
                 sort = { _id: -1 };
             }
 
-            // Esegui la query
-            console.log("[-] Ricerca Scambi in corso con query:", searchQuery !== "" ? searchQuery : "undefined" , "e ordinamento:", sortBy);
+            // Esegue la ricerca
+            console.log("[-] Ricerca Scambi in corso con query:", searchQuery !== "" ? searchQuery : "undefined", "e ordinamento:", sortBy);
             const trades = await tradeModel.find(query)
                 .sort(sort)
                 .populate('userIdOffer', 'username')
                 .populate('userIdBuyer', 'username');
 
-            // Filtro addizionale per affinare la ricerca se necessario
+            // Filtra ulteriormente i risultati se necessario
             let filteredTrades = trades;
             if (searchQuery && searchQuery.trim()) {
                 const searchTerm = searchQuery.trim().toLowerCase();
-                
+
                 filteredTrades = trades.filter(trade => {
                     // Verifica se almeno una carta offerta contiene il termine di ricerca
-                    const offeredMatch = trade.offered_cardIds.some(card => 
+                    const offeredMatch = trade.offered_cardIds.some(card =>
                         card.name.toLowerCase().includes(searchTerm) ||
-                        (card.alternate_names && card.alternate_names.some(altName => 
+                        (card.alternate_names && card.alternate_names.some(altName =>
                             altName.toLowerCase().includes(searchTerm)
                         ))
                     );
-                    
+
                     // Verifica se almeno una carta richiesta contiene il termine di ricerca
                     // const requestedMatch = trade.requested_cardIds.some(card => 
                     //     card.name.toLowerCase().includes(searchTerm) ||
@@ -571,53 +585,59 @@ export const searchTradesController = () => {
                     //         altName.toLowerCase().includes(searchTerm)
                     //     ))
                     // );
-                    
+
                     return offeredMatch // || requestedMatch;
                 });
-                
+
                 console.log("[-] Filtro applicato. Scambi prima del filtro:", trades.length, "dopo:", filteredTrades.length);
             }
 
-            // Aggiungi informazioni sull'offerente
+            // Aggiunge informazioni sugli offerenti
             const tradesWithOffererInfo = await Promise.all(filteredTrades.map(async (trade) => {
                 const tradeObj = trade.toObject();
                 const userOffer = await userModel.findById(trade.userIdOffer);
-                
+
+                const userTrades = await tradeModel.find({ 
+                    userIdOffer: userOffer._id,
+                    status: TRADE_STATUS.COMPLETED 
+                });
+                const completedTrades = userTrades.length;
+                const totalTrades = await tradeModel.countDocuments({ userIdOffer: userOffer._id });
+
                 if (userOffer) {
-                    const completedTrades = userOffer.trades.filter(t => t.status === TRADE_STATUS.COMPLETED).length;
                     tradeObj.offererInfo = {
                         username: userOffer.username,
                         userInitials: userOffer.username.split(' ').map(word => word.charAt(0).toUpperCase()).join(''),
-                        totalTrades: userOffer.trades.length,
+                        totalTrades,
                         completedTrades,
-                        rating: userOffer.trades.length > 0 ? (completedTrades / userOffer.trades.length) * 5 : 0
+                        rating: (totalTrades > 0 ? (completedTrades / totalTrades) * 5 : 0).toFixed(1)
                     };
                 } else {
                     console.log("[-] Utente offerente non trovato per lo scambio:", trade._id);
                     // Non restituire errore, ma saltare questo scambio
                     return null;
                 }
-                
+
                 return tradeObj;
             }));
 
-            // Rimuovi gli scambi con utenti non trovati
+            // Rimuove gli scambi con utenti non trovati
             const validTrades = tradesWithOffererInfo.filter(trade => trade !== null);
 
             console.log("[-] Ricerca Scambi completata. Scambi trovati:", validTrades.length);
 
             return res.status(200).send({
-                message: searchQuery ? 
-                    `Trovati ${validTrades.length} scambi per "${searchQuery}"` : 
+                message: searchQuery ?
+                    `Trovati ${validTrades.length} scambi per "${searchQuery}"` :
                     "Scambi recuperati con successo",
                 trades: validTrades,
             });
 
         } catch (error) {
             console.error("[-] Errore durante la ricerca degli scambi:", error);
-            return res.status(500).send({ 
+            return res.status(500).send({
                 message: "Errore durante la ricerca degli scambi",
-                error: error.message 
+                error: error.message
             });
         }
     }

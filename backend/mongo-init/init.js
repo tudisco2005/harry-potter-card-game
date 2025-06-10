@@ -1,4 +1,7 @@
-// mongo-init/init.js
+// Questo script inizializza il database MongoDB
+// Crea un utente non-root con permessi di lettura/scrittura
+// Viene eseguito automaticamente quando il container MongoDB si avvia
+
 db = db.getSiblingDB(process.env.MONGO_INITDB_DATABASE);
 
 // Crea un utente per il database dell'applicazione

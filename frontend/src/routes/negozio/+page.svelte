@@ -1,6 +1,7 @@
 <script>
     import { invalidateAll } from "$app/navigation";
     import CharacterCard from "../../components/CharacterCard.svelte";
+    import { formattDate } from "$lib";
     let { data } = $props();
 
     let balance = $state(data.user.balance);
@@ -12,7 +13,6 @@
 
     let isHovered = $state(false);
 
-    // Funzione per toggleare l'animazione
     function toggleAnimation() {
         isHovered = !isHovered;
     }
@@ -46,7 +46,7 @@
             successMessage = "Seleziona una quantità valida";
             return;
         }
-        // Logica per acquistare crediti
+        // Chiamata API per acquistare crediti
         await fetch("/api/buyCredits", {
             method: "POST",
             headers: {
@@ -54,7 +54,7 @@
             },
             body: JSON.stringify({
                 amount: amountTobuy,
-            }), // Invia la quantità di pacchetti da aprire
+            }),
         })
         .then((response) => response.json())
         .then((dataResponse) => {
@@ -98,8 +98,7 @@
 
     async function openPackage() {
         openPackageModal = true;
-        // Logica per aprire il pacchetto
-        console.log("Pacchetto aperto!");
+        // Chiamata API per aprire i pacchetti
         await fetch("/api/openPackage", {
             method: "POST",
             headers: {
@@ -107,12 +106,12 @@
             },
             body: JSON.stringify({
                 quantity: quantityOptions[quantityOptionsIndex],
-            }), // Invia la quantità di pacchetti da aprire
+            }),
         })
             .then((response) => response.json())
             .then((dataResponse) => {
                 console.log("Pacchetto aperto con successo:", dataResponse);
-                newCards = dataResponse.newCards; // Supponendo che la risposta contenga le carte ottenute
+                newCards = dataResponse.newCards; // Aggiorna le carte ottenute
                 data.user.balance = dataResponse.remainingCredits; // Aggiorna il saldo dell'utente
                 balance = dataResponse.remainingCredits; // Aggiorna il saldo dell'utente
                 invalidateAll();
@@ -454,7 +453,7 @@
                         <p
                             class="mt-6 text-center text-gray-500 dark:text-gray-400 sm:mt-8 lg:text-left"
                         >
-                            Attenzione: Questi dati non verrano trasmessi è solo
+                            Attenzione: Questi dati non verranno trasmessi è solo
                             dimostrativo, sconsigliamo di inserire dati reali.
                         </p>
                     </div>

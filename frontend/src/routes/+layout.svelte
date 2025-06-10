@@ -2,7 +2,7 @@
     // Importa gli stili CSS globali dell'applicazione
     import '../app.css';
 
-    // Importa i componenti principali
+    // Importa i componenti principali per la navigazione e il footer
     import Navbar from "../components/Navbar.svelte";
     import Footer from '../components/Footer.svelte';
     // Importa lo store della pagina per accedere all'URL corrente
@@ -31,7 +31,7 @@
 
     <!-- Contenitore principale con sfondo scuro -->
     <div class="dark:bg-gray-900 flex flex-col flex-grow">
-        <!-- Area principale del contenuto -->
+        <!-- Area principale del contenuto centrata verticalmente e orizzontalmente -->
         <main class="flex-grow flex items-center justify-center pt-2">
             {@render children()}
         </main>

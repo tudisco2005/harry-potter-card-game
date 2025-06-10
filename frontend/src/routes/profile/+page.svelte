@@ -10,17 +10,17 @@
     let createdAt = formattDate(data.user.createdAt);
     let game_cards = data.user.game_cards;
 
-    // each card has is anq quantity
-    let total_cards_counter = game_cards.reduce((sum, card) => sum + card.quantity, 0);
-    let double_cards_counter = game_cards.reduce((sum, card) => sum + (card.quantity > 1 ? card.quantity - 1 : 0), 0);
-    let missing_card_counter = game_cards.reduce((sum, card) => sum + (card.quantity === 0 ? 1 : 0), 0);
+    // Calcola le statistiche delle carte
+    let total_cards_counter = game_cards.reduce((sum, card) => sum + card.quantity, 0);  // Numero totale di carte
+    let double_cards_counter = game_cards.reduce((sum, card) => sum + (card.quantity > 1 ? card.quantity - 1 : 0), 0);  // Numero di doppioni
+    let missing_card_counter = game_cards.reduce((sum, card) => sum + (card.quantity === 0 ? 1 : 0), 0);  // Numero di carte mancanti
 
     let error = $state("");
     let errorRequest = $state("");
     let errorWizard = $state("");
     let success = $state(true); // Inizia come true perché non ci sono modifiche
 
-    // Usa $effect per reagire automaticamente ai cambiamenti in Svelte 5
+    // Effetto per la validazione dei campi in tempo reale
     $effect(() => {
         // Reset degli errori
         error = "";
@@ -67,7 +67,7 @@
             return;
         }
 
-        // send requesto to api/update-profile
+        // Invia la richiesta di aggiornamento all'API
         fetch("/api/update-profile", {
             method: "POST",
             headers: {
@@ -103,7 +103,7 @@
     let successDeleting = $state(false)
 
     async function deleteAccount() {
-        // fetch to /api/delete
+        // Chiamata API per eliminare l'account
         const response = await fetch("/api/delete", {
             method: "DELETE",
             headers: {
@@ -112,7 +112,7 @@
         });
 
         if (response.ok) {
-            // Handle successful deletion
+            // Gestione del successo
             errorDeleting = "";
             successDeleting = true;
             invalidateAll();
@@ -121,7 +121,7 @@
                 goto("/");
             })
         } else {
-            // Handle error
+            // Gestione dell'errore
             const errorData = await response.json();
             errorDeleting = errorData.message;
             successDeleting = false;

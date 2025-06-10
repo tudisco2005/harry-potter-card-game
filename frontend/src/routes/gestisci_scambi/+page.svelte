@@ -1,26 +1,32 @@
 <script>
+    // Importa i componenti e le funzioni necessarie
     import { onMount } from 'svelte';
     import TradeCard from '../../components/TradeCard.svelte';
     import CharacterCard from '../../components/CharacterCard.svelte';
     import { invalidateAll } from '$app/navigation';
 
+    // Riceve i dati dal server
     let { data } = $props();
 
-    let dettailCardsModal = $state(false);
-    let dettailCards = $state([]);
-    let dettailCardsText = $state("");
-    let allTrades = $state([]);
+    // Stato dei modali e delle carte di dettaglio
+    let dettailCardsModal = $state(false); // Stato del modale dei dettagli carte
+    let dettailCards = $state([]);         // Carte da mostrare nel modale
+    let dettailCardsText = $state("");    // Testo del modale ("Offerte" o "Chieste")
+    let allTrades = $state([]);            // Tutti gli scambi dell'utente
 
+    // Mostra le carte offerte nel modale
     async function offeredCardsClick() {
         dettailCardsModal = true;
         dettailCardsText = "Offerte";
     }
 
+    // Mostra le carte chieste nel modale
     async function askCardsClick() {
         dettailCardsModal = true;
         dettailCardsText = "Chieste";
     }
 
+    // Recupera tutti gli scambi dell'utente
     async function getAllMyTrades() {
          try {
             const response = await fetch("/api/getAllMyTrades", {
@@ -39,10 +45,12 @@
         }
     }
 
+    // All'avvio recupera tutti gli scambi
     onMount(() => {
         getAllMyTrades();
     });
 
+    // Cancella uno scambio
     async function deleteTrade(tradeId) {
          try {
             const response = await fetch("/api/deleteTrade", {

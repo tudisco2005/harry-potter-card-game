@@ -1,6 +1,6 @@
 <script>
-
   import CharacterCardMini from './CharacterCardMini.svelte';
+  
   export let cards = [];
   export let flipDisabled = false;
 

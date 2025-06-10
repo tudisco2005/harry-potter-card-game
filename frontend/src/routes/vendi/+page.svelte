@@ -7,16 +7,11 @@
 
     async function loadTable() {
         try {
-            // Simulating API fetch - replace with your actual API endpoint
             const response = await fetch(`/api/search-card?sortBy=quantity`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             const data = await response.json();
-
-            // Assuming data.filtered_game_cards is an array of card objects
-            // Each card object should ideally have a unique 'id' property for keyed {#each} and robust selection.
-            // Example: { id: 'unique_card_id_1', name: 'Card Name', quantity: 1, image: 'url', house: 'House Name' }
 
             game_cards_filtered = data.filtered_game_cards.filter(
                 (card) => card.quantity > 1,
@@ -35,10 +30,7 @@
         success = false;
         errorText = "";
         successText = "";
-        // Using indexOf assumes that the 'card' object instance is the same.
-        // If card objects might be different instances for the same card data,
-        // you should use findIndex with a unique ID:
-        // const index = selectedCards.findIndex(c => c.id === card.id);
+       
         const index = selectedCards.indexOf(card);
 
         if (index > -1) {
@@ -46,17 +38,14 @@
         } else {
             selectedCards.push(card);
         }
-        // With Svelte 5 runes ($state), direct array mutations are reactive.
-        // For older Svelte, you'd do: selectedCards = selectedCards; or selectedCards = [...selectedCards];
     }
 
-    // Derived state for the "Select All" checkbox
     const allItemsSelected = $derived(
         game_cards_filtered.length > 0 &&
             selectedCards.length === game_cards_filtered.length,
     );
 
-    // Derived state for the indeterminate state of the "Select All" checkbox
+    
     const isIndeterminate = $derived(
         selectedCards.length > 0 &&
             selectedCards.length < game_cards_filtered.length,
@@ -64,10 +53,10 @@
 
     function handleSelectAllChange(event) {
         if (event.target.checked) {
-            // Select all filtered cards
+            // Seleziona tutte le carte filtrate
             selectedCards = [...game_cards_filtered];
         } else {
-            // Deselect all cards
+            // Deseleziona tutte le carte
             selectedCards = [];
         }
     }
@@ -97,7 +86,7 @@
                 successText = data.creditsEarned > 0
                     ? `Hai guadagnato ${data.creditsEarned} crediti!`
                     : "Nessun credito guadagnato.";
-                // Optionally, clear selected cards after selling
+                // pulisci le carte selezionate dopo la vendita
                 selectedCards = [];
                 invalidateAll();
                 loadTable(); // Reload the table to reflect changes

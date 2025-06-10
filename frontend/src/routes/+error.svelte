@@ -6,7 +6,6 @@
 <!-- 
     Componente di visualizzazione degli errori
     Mostra il codice di stato dell'errore e il messaggio di errore
-    Utilizza stili Tailwind per la formattazione
 -->
 <div class="flex-grow text-center items-center justify-center">
     <!-- Codice di stato dell'errore (es. 404, 500) -->

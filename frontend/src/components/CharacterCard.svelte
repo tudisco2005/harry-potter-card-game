@@ -4,14 +4,16 @@
 
     // Props del componente
     export let flipDisabled = false;  // Disabilita il ribaltamento della carta
-    export let content;               // Contenuto della carta
+    export let content;               // Contenuto della carta (dati del personaggio)
     export let quantity = 1;          // Quantità di carte possedute
     export let requested = false;     // Indica se la carta è stata richiesta in uno scambio
 </script>
 
 <!-- 
     Contenitore principale della carta
-    Applica effetti visivi in base allo stato della carta
+    Applica effetti visivi in base allo stato della carta:
+    - Grigio se non posseduta e non richiesta
+    - Opacità ridotta se non posseduta
 -->
 <div
     class:grayscale={!requested && quantity == 0} 
@@ -23,6 +25,7 @@
         <!-- 
             Tag diagonale che indica lo stato della carta
             Appare quando la carta non è posseduta o è già richiesta
+            Mostra "MANCANTE" o "Richiesta già in corso..."
         -->
         <div class="absolute inset-0 z-10 pointer-events-none">
             <div
@@ -35,6 +38,7 @@
         <!-- 
             Contatore delle carte possedute
             Appare in alto a destra quando si possiedono più copie
+            Mostra "xN" o "x99+" se si hanno più di 99 copie
         -->
         <div class="absolute top-2 right-2 z-20 pointer-events-none">
             <div class="bg-red-600 text-white text-sm font-bold px-2 py-1 rounded-full min-w-[24px] h-6 flex items-center justify-center shadow-lg border-2 border-white">
@@ -42,7 +46,7 @@
             </div>
         </div>
     {/if}
-    <!-- Renderizza il contenuto della carta -->
+    <!-- Renderizza il contenuto della carta passando tutte le props -->
     <CharacterCardContent {...content} flipDisabled={flipDisabled}/>
 </div>
 

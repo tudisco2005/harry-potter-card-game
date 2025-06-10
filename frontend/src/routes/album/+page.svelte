@@ -5,44 +5,43 @@
     let { data } = $props();
     let game_cards = data.user.game_cards;
 
-    // each card has is anq quantity
-    let total_cards_counter = game_cards.length;
-    let uniq_card_counter = game_cards.reduce((sum, card) => sum + (card.quantity > 0 ? 1 : 0), 0);
+    // Calcola le statistiche delle carte
+    let total_cards_counter = game_cards.length;  // Numero totale di carte
+    let uniq_card_counter = game_cards.reduce((sum, card) => sum + (card.quantity > 0 ? 1 : 0), 0);  // Numero di carte uniche
 
-    // render cards in batches
-    let renderLimit = $state(30); // Limite di rendering iniziale
+    // Gestione del rendering lazy delle carte
+    let renderLimit = $state(30);  // Limite iniziale di carte da visualizzare
     const loadMore = () => {
-        renderLimit += 20; // Aumenta il limite di rendering
+        renderLimit += 20;  // Aumenta il numero di carte visualizzate
     };
 
+    // Gestione dello scroll e del rendering dinamico
     import { onMount, onDestroy } from "svelte";
-    let sentinel;
-    let lastScrollY = 0;
+    let sentinel;  // Elemento sentinella per il lazy loading
+    let lastScrollY = 0;  // Ultima posizione dello scroll
 
+    // Gestisce lo scroll della pagina per il lazy loading
     function onScroll() {
         const currentScrollY = window.scrollY;
 
-        // Scrolling down: if the sentinel becomes visible, load more cards
+        // Scrolling verso il basso: carica più carte quando il sentinel diventa visibile
         if (currentScrollY > lastScrollY && sentinel) {
             const { top } = sentinel.getBoundingClientRect();
             if (top < window.innerHeight) {
                 loadMore();
             }
         }
-        // Scrolling up: gestione più intelligente della rimozione delle carte
+        // Scrolling verso l'alto: gestione intelligente della rimozione delle carte
         else if (currentScrollY < lastScrollY && renderLimit > 30 && sentinel) {
             const scrollDifference = lastScrollY - currentScrollY;
             const { top } = sentinel.getBoundingClientRect();
 
-            // Solo se hai scrollato significativamente verso l'alto E il sentinel è molto lontano
+            // Rimuovi carte solo se hai scrollato significativamente verso l'alto
             if (scrollDifference > 200 && top > window.innerHeight * 1.5) {
-                // Rimuovi solo alcune carte, non troppe
                 renderLimit = Math.max(30, renderLimit - 10);
             }
-
-            // Oppure se sei tornato molto in alto nella pagina
+            // Reset graduale quando torni in cima alla pagina
             else if (currentScrollY < 100 && renderLimit > 50) {
-                // Reset più graduale quando torni in cima
                 renderLimit = Math.max(50, renderLimit - 20);
             }
         }
@@ -50,6 +49,7 @@
         lastScrollY = currentScrollY;
     }
 
+    // Inizializzazione e pulizia degli event listener
     onMount(() => {
         lastScrollY = window.scrollY;
         searchCards();
@@ -61,13 +61,14 @@
         window.removeEventListener("scroll", onScroll);
     });
 
-    // ricerca e ordinamento lato server
-    let searchQuery = $state("");
-    let game_cards_filtered = $state(data.user.game_cards);
-    let sortingModal = $state(false);
-    let sortBy = $state("quantity");
-    let sortByAttributeName = $state("species");
+    // Gestione della ricerca e dell'ordinamento
+    let searchQuery = $state("");  // Query di ricerca
+    let game_cards_filtered = $state(data.user.game_cards);  // Carte filtrate
+    let sortingModal = $state(false);  // Stato del modal di ordinamento
+    let sortBy = $state("quantity");  // Metodo di ordinamento
+    let sortByAttributeName = $state("species");  // Attributo per l'ordinamento
 
+    // Lista degli attributi disponibili per l'ordinamento
     let attributes = [
         "species",
         "gender",
@@ -79,6 +80,7 @@
         "patronus",
     ];
 
+    // Funzione per cercare e ordinare le carte
     async function searchCards() {
         const params = new URLSearchParams({
             searchQuery,
@@ -89,14 +91,14 @@
             .then((response) => response.json())
             .then((data) => {
                 console.log("Carte trovate:", data);
-                game_cards_filtered = data.filtered_game_cards; // Aggiorna le carte filtrate
+                game_cards_filtered = data.filtered_game_cards;  // Aggiorna le carte filtrate
             })
             .catch((error) => {
                 console.error("Errore durante la ricerca delle carte:", error);
             });
+    }
 
-        }
-        let helpBox = $state(false);
+    let helpBox = $state(false);  // Stato del box di aiuto
 </script>
 
 <!-- modal ordinamento risultati -->

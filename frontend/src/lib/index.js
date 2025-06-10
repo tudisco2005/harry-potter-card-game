@@ -1,4 +1,5 @@
 // place files you want to import through the `$lib` alias in this folder.
+
 export function formattDate(dataISO) {
   const data = new Date(dataISO);
   

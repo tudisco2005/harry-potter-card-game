@@ -955,17 +955,19 @@
             <div class="flex flex-wrap gap-2 items-center">
                 <span class="text-sm text-gray-300">Filtri rapidi:</span>
                 <button
-                    on:click={() => {
+                    on:click={async() => {
                         searchQuery = "";
-                        search();
+                        await search();
                     }}
                     class="px-3 py-1 bg-yellow-500/20 text-yellow-400 rounded-full text-sm border border-yellow-500/30 hover:bg-yellow-500/30 transition-colors"
                 >
                     Tutti
                 </button>
                 <button
-                    on:click={() => {
-                        allTradesFiltered = allTrades.filter((trade) =>
+                    on:click={async () => {
+                        searchQuery = "";
+                        await search();
+                        allTradesFiltered = allTradesFiltered.filter((trade) =>
                             trade.offered_cardIds.some((card) =>
                                 askPossibleCard.some(
                                     (missing) => missing.id === card.id,
@@ -978,8 +980,10 @@
                     Carte Mancanti
                 </button>
                 <button
-                    on:click={() => {
-                        allTradesFiltered = allTrades.filter(
+                    on:click={async() => {
+                        searchQuery = "";
+                        await search();
+                        allTradesFiltered = allTradesFiltered.filter(
                             (trade) => trade.offered_cardIds.length > 1,
                         );
                     }}

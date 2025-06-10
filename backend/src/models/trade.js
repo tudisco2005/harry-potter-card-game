@@ -1,35 +1,43 @@
 import mongoose from "mongoose";
 import { gameCardSchema } from "./user.js";
 
+// Schema per gli scambi di carte
 const tradeSchema = new mongoose.Schema({
+    // ID dell'utente che offre lo scambio
     userIdOffer: {
         type: String,
         required: true,
         trim: true
     },
+    // ID dell'utente che accetta lo scambio (opzionale finché non viene accettato)
     userIdBuyer: {
         type: String,
         trim: true
     },
+    // Array di carte offerte per lo scambio
     offered_cardIds: {
         type: [gameCardSchema],
         required: true,
         trim: true
     },
+    // Array di carte richieste in cambio
     requested_cardIds: {
         type: [gameCardSchema],
         required: true,
         trim: true
     },
+    // Stato dello scambio: aperto, completato, cancellato o scaduto
     status: {
         type: String,
         enum: ["open", "completed", "cancelled", "expired"],
         default: "open"
     },
+    // Data di creazione dello scambio
     createdAt: {
         type: Date,
         default: Date.now
     },
+    // Data di scadenza dello scambio
     expirateAt: {
         type: Date,
         required: true,

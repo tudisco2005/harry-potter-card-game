@@ -1,7 +1,9 @@
 <script>
+  // Importa le funzioni di navigazione e invalidazione della cache
   import { goto, invalidateAll } from '$app/navigation';
   import { onMount } from 'svelte';
 
+  // All'avvio esegue il logout chiamando l'API e reindirizza alla home
   onMount(async () => {
     try {
       const response = await fetch('/api/logout', {
@@ -12,10 +14,10 @@
         await invalidateAll();
         goto('/');
       } else {
-        console.error('Logout failed');
+        console.error('Logout fallito');
       }
     } catch (err) {
-      console.error('Logout error:', err);
+      console.error('Errore durante il logout:', err);
     }
   });
 </script>

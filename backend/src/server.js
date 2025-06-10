@@ -11,7 +11,7 @@ import connectDB from "./database.js";
 // Caricamento delle variabili d'ambiente dal file .env
 dotenv.config();
 
-// Validazione delle variabili d'ambiente richieste
+// Verifica che tutte le variabili d'ambiente necessarie siano presenti
 const requiredEnvVars = [
     'PROTOCOL',
     'MONGO_HOST',
@@ -21,6 +21,7 @@ const requiredEnvVars = [
     'MONGO_DATABASE_COLLECTIONS'
 ];
 
+// Controllo delle variabili d'ambiente mancanti
 const missingEnvVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
 if (missingEnvVars.length > 0) {
     throw new Error(`Variabili d'ambiente mancanti: ${missingEnvVars.join(', ')}`);
@@ -30,6 +31,7 @@ if (missingEnvVars.length > 0) {
 // CONFIGURAZIONE DATABASE
 // ==========================================
 
+// Tentativo di connessione al database MongoDB
 let mongodb;
 try {
     mongodb = await connectDB(
@@ -68,7 +70,7 @@ server.on('error', (error) => {
     process.exit(1);
 });
 
-// Gestione della chiusura del server
+// Gestione della chiusura pulita del server
 process.on('SIGTERM', () => {
     console.log('[+] Chiusura del server in corso...');
     server.close(() => {
@@ -77,7 +79,7 @@ process.on('SIGTERM', () => {
     });
 });
 
-// Avvio del server
+// Avvio del server sulla porta specificata
 server.listen(PORT, () => {
     console.log(`[+] Server avviato e in esecuzione sulla porta: ${PORT}`);
 });

@@ -80,7 +80,6 @@
 
   // Reattive declarations
   $: houseColors = getHouseColors(house);
-  $: formattedDate = formatDate(dateOfBirth);
   $: primaryAlternateName = getPrimaryAlternateName(alternateNames);
   $: wandInfo = formatWandInfo(wand);
   $: isAlive = alive;

@@ -1,3 +1,8 @@
+<!--
+  Pagina dei Termini e Condizioni di Utilizzo
+  Questa pagina mostra le regole, le limitazioni e le avvertenze per l'uso del progetto.
+  Tutto il contenuto è a scopo informativo e didattico.
+-->
 <div class="mt-2 py-12 mx-4 md:max-w-3/4">
     <section class="bg-gray-800 p-6 rounded-2xl border-2 border-gray-700 text-white">
         <h1 class="text-3xl font-bold mb-4">Termini e Condizioni di Utilizzo</h1>
