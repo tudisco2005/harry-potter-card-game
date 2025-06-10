@@ -5,6 +5,44 @@ import blacklistModel from '../models/blacklist.js';
 import { generateToken, verifyToken } from '../auth/auth.js';
 import { generateRandomCards } from '../utils/utils.js';
 
+// Costanti di validazione
+const VALIDATION = {
+    PASSWORD: {
+        MIN_LENGTH: 8,
+        REGEX: /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/
+    },
+    EMAIL: {
+        REGEX: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/
+    },
+    USERNAME: {
+        FORBIDDEN_CHAR: '@'
+    }
+};
+
+// Funzioni di utilità
+const validateUserInput = (username, email, password) => {
+    const errors = [];
+    
+    if (username.includes(VALIDATION.USERNAME.FORBIDDEN_CHAR)) {
+        errors.push("Il nome utente non può contenere '@'");
+    }
+    
+    if (!VALIDATION.EMAIL.REGEX.test(email)) {
+        errors.push("Formato email non valido");
+    }
+    
+    if (!VALIDATION.PASSWORD.REGEX.test(password)) {
+        errors.push("La password deve contenere almeno 8 caratteri, una maiuscola, una minuscola e un numero");
+    }
+    
+    return errors;
+};
+
+const handleError = (res, error, message = "Errore del server") => {
+    console.error(`[-] ${message}:`, error);
+    return res.status(500).send({ message });
+};
+
 /**
  * @swagger
  * /api/user/register:
@@ -59,97 +97,73 @@ import { generateRandomCards } from '../utils/utils.js';
  */
 export const createUserController = () => {
     return async function registerUser(req, res) {
-        const { username, email, favouriteWizard, password, confirmPassword } = req.body;
-
-        // Validate input
-        // - check if fields are not empty
-        if (!username || !email || !favouriteWizard || !password || !confirmPassword) {
-            console.log("[-] Registrazione fallita: Campi mancanti nella registrazione");
-            return res.status(400).send({ message: "Non sono presenti tutti i campi" });
-        }
-
-        // check if username contains @
-        if (username.includes("@")) {
-            console.log("[-] Registrazione fallita: Il nome utente non può contenere '@'");
-            return res.status(400).send({ message: "Il nome utente non può contenere '@'" });
-        }
-
-        // Validate email format
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        if (!emailRegex.test(email)) {
-            console.log("[-] Registrazione fallita: Formato email non valido");
-            return res.status(400).send({ message: "Formato email non valido" });
-        }
-
-        // - check password rules(min 8, 1 uppercase, 1 lowercase, 1 number)
-        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
-        if (!passwordRegex.test(password)) {
-            console.log("[-] Registrazione fallita: Password non valida");
-            return res.status(400).send({ message: "La password deve contenere almeno 8 caratteri, una maiuscola, una minuscola e un numero" });
-        }
-
-        // - if passwords are the same
-        if (password != confirmPassword) {
-            console.log("[-] Registrazione fallita: Le password non corrispondono");
-            return res.status(400).send({ message: "Le password non corrispondono" });
-        }
-
-        //check if username already exists
-        const existingUser = await userModel.findOne({ username }).catch((error) => {
-            console.error("[-] Errore durante la ricerca dell'utente:", error);
-            return res.status(500).send({ message: "Errore Server" });
-        });
-        if (existingUser) {
-            console.log("[-] Registrazione fallita: Nome utente già esistente");
-            return res.status(400).send({ message: "Nome utente già esistente" });
-        }
-
-        //check if email already exists
-        const existingEmail = await userModel.findOne({ email }).catch((error) => {
-            console.error("[-] Errore durante la ricerca dell'email:", error);
-            return res.status(500).send({ message: "Errore Server" });
-        });
-        if (existingEmail) {
-            console.log("[-] Registrazione fallita: Email già esistente");
-            return res.status(400).send({ message: "Email già esistente" });
-        }
-
-        //hash password using argon
-        const hash = await hashPassword(password).catch((error) => {
-            console.log("[-] Errore durante l'hashing della password:", error);
-            return res.status(500).send({ message: "Errore Server" });
-        });
-
-        // set all cards to quantity 0
-        // fetch card from https://hp-api.onrender.com/api/characters
-        const response = await fetch('https://hp-api.onrender.com/api/characters');
-        const cards = await response.json();
-        const game_cards = cards.map(card => ({
-            ...card,
-            quantity: 0
-        }));
-
-        // starting balance
-        const startingBalance = 5; // Starting balance for new users
-
         try {
-            await userModel.create({
+            const { username, email, favouriteWizard, password, confirmPassword } = req.body;
+
+            // Verifica campi obbligatori
+            if (!username || !email || !favouriteWizard || !password || !confirmPassword) {
+                console.log("[-] Registrazione fallita: Campi mancanti nella registrazione");
+                return res.status(400).send({ message: "Non sono presenti tutti i campi" });
+            }
+
+            // Validazione input
+            const validationErrors = validateUserInput(username, email, password);
+            if (validationErrors.length > 0) {
+                console.log(`[-] Registrazione fallita: ${validationErrors[0]}`);
+                return res.status(400).send({ message: validationErrors[0] });
+            }
+
+            // Verifica corrispondenza password
+            if (password !== confirmPassword) {
+                console.log("[-] Registrazione fallita: Le password non corrispondono");
+                return res.status(400).send({ message: "Le password non corrispondono" });
+            }
+
+            // Verifica esistenza utente
+            const [existingUser, existingEmail] = await Promise.all([
+                userModel.findOne({ username }),
+                userModel.findOne({ email })
+            ]);
+
+            if (existingUser) {
+                console.log("[-] Registrazione fallita: Nome utente già esistente");
+                return res.status(400).send({ message: "Nome utente già esistente" });
+            }
+            if (existingEmail) {
+                console.log("[-] Registrazione fallita: Email già esistente");
+                return res.status(400).send({ message: "Email già esistente" });
+            }
+
+            // Hash password
+            const hash = await hashPassword(password);
+            console.log("[+] Password hashata con successo");
+
+            // Recupero carte iniziali
+            console.log("[-] Recupero carte iniziali in corso...");
+            const response = await fetch('https://hp-api.onrender.com/api/characters');
+            const cards = await response.json();
+            const game_cards = cards.map(card => ({
+                ...card,
+                quantity: 0
+            }));
+            console.log("[+] Carte iniziali recuperate con successo");
+
+            // Creazione utente
+            const newUser = await userModel.create({
                 username,
                 email,
                 favouriteWizard,
                 password: hash,
                 game_cards,
-                balance: startingBalance
+                balance: 5
             });
 
-            // Log user registration details
             console.log("[+] Registrazione nuovo utente:", { username, email, favouriteWizard });
+            return res.status(201).send({ message: "Registrazione con successo" });
 
-            // Send success response
-            res.status(201).send({ message: "Registrazione con successo" });
         } catch (error) {
             console.error("[-] Errore durante la registrazione:", error);
-            res.status(500).send({ message: "Errore durante la registrazione" });
+            return res.status(500).send({ message: "Errore durante la registrazione" });
         }
     }
 };
@@ -201,24 +215,17 @@ export const createUserController = () => {
  */
 export const loginUserController = () => {
     return async function loginUser(req, res) {
-        const { username, password } = req.body;
-
-        console.log("[-] Login in corso:", { username, password });
-
-        // Validate input
-        if (!username || !password) {
-            console.log("[-] Login fallito: Campi mancanti nella registrazione");
-            return res.status(400).send({ message: "Non sono presenti tutti i campi" });
-        }
-
-        // check if is a username or email
-        const isEmail = username.includes("@");
-        let query = isEmail ? { email: username } : { username: username };
-
         try {
-            const user = await userModel.findOne(query).catch((error) => {
-                console.error("[-] Errore durante la ricerca dell'utente:", error);
-                return res.status(500).send({ message: "Errore Server" });
+            const { username, password } = req.body;
+            console.log("[-] Login in corso:", { username });
+
+            if (!username || !password) {
+                console.log("[-] Login fallito: Campi mancanti");
+                return res.status(400).send({ message: "Username e password sono obbligatori" });
+            }
+
+            const user = await userModel.findOne({
+                $or: [{ username }, { email: username }]
             });
 
             if (!user) {
@@ -226,36 +233,45 @@ export const loginUserController = () => {
                 return res.status(404).send({ message: "Utente non trovato" });
             }
 
-            const isPasswordValid = await verifyPassword(password, user.password).catch((error) => {
-                console.error("[-] Errore durante la verifica della password:", error);
-                return res.status(500).send({ message: "Errore Server" });
-            });
-
-            if (!isPasswordValid) {
+            const isValidPassword = await verifyPassword(password, user.password);
+            if (!isValidPassword) {
                 console.log("[-] Login fallito: Password errata");
-                return res.status(401).send({ message: "Password errata" });
+                return res.status(401).send({ message: "Credenziali non valide" });
             }
 
-            // Generate JWT token
-            const token = generateToken(user);
-            if (!token) {
-                console.error("[-] Errore durante la generazione del token JWT");
-                return res.status(500).send({ message: "Errore durante il login" });
-            }
-
-            // Log successful login
+            const token = await generateToken(user);
             console.log("[+] Login effettuato con successo:", { username });
 
-            // Send success response
-            res.status(200).send({ message: "Login effettuato con successo", token });
+            return res.status(200).send({
+                message: "Login effettuato con successo",
+                token
+            });
+
         } catch (error) {
             console.error("[-] Errore durante il login:", error);
-            res.status(500).send({ message: "Errore durante il login" });
+            return res.status(500).send({ message: "Errore durante il login" });
         }
     }
 };
 
-
+/**
+ * @swagger
+ * /api/user/logout:
+ *   post:
+ *     tags:
+ *       - Utente
+ *     summary: Logout utente
+ *     description: Disconnetti l'utente autenticato
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout effettuato con successo
+ *       401:
+ *         description: Token non valido
+ *       500:
+ *         description: Errore del server
+ */
 export const logoutUserController = () => {
     return async function logoutUser(req, res) {
         try {

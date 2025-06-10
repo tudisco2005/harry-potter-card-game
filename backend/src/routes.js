@@ -27,7 +27,8 @@ import {
     createTradeController,
     getAllTradesController,
     acceptTradeController,
-    deleteTradeController
+    deleteTradeController,
+    searchTradesController
 } from "./controllers/trade.js";
 
 // Importazione dei middleware di autenticazione e utilità
@@ -91,6 +92,7 @@ export const initRoutes = async () => {
     router.use(checkExpiredTrades); // Controlla e gestisce gli scambi scaduti
     router.post("/trade/create", await authenticateUser, createTradeController()); // Crea una nuova proposta di scambio
     router.get("/trade/all", await authenticateUser, getAllTradesController()); // Lista tutti gli scambi disponibili
+    router.get("/trade/search", await authenticateUser, searchTradesController()); // Cerca gli scambi disponibili
     router.post("/trade/accept", await authenticateUser, acceptTradeController()); // Accetta una proposta di scambio
     router.delete("/trade/delete", await authenticateUser, deleteTradeController()); // Elimina una proposta di scambio
 

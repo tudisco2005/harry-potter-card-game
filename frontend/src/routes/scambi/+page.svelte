@@ -24,29 +24,56 @@
                     return;
                 }
                 const data = await response.json();
-                offerPossibleCard = data.doubleCards; // Assicurati che la risposta abbia un campo 'cards'
+                const doubleCards = data.doubleCards; 
+
+                // ottengo tutti gli scambi e sottraggo le carte già offerte in scambi "open"
+                const allTradesResponse = await fetch("/api/getAllMyTrades", {
+                    method: "GET",
+                    headers: { "Content-Type": "application/json" },
+                });
+                const allTradesData = await allTradesResponse.json();
+            
+                const openTrades = allTradesData.trades.filter(
+                    (trade) => trade.status === "open",
+                );
+            
+                // sottraggo le carte già offerte in scambi "open"
+                doubleCards.forEach((card) => {
+                    openTrades.forEach((trade) => {
+                        const offeredCard = trade.offered_cardIds.find(
+                            (offered) => offered.id === card.id,
+                        );
+                        if (offeredCard) {
+                            card.quantity -= offeredCard.quantity;
+                        }
+                    });
+                });
+
+                offerPossibleCard = doubleCards.filter(
+                    (card) => card.quantity > 0,
+                );
             })
             .catch((error) => {
                 console.error("Errore di rete:", error);
             });
     }
 
-    async function fetchAvailableCardsForCreateTrade() {
+    async function fetchMissingCardsForCreateTrade() {
         await fetch("/api/missingCards", {
             method: "GET",
             headers: { "Content-Type": "application/json" },
         })
-            .then(async (response) => {
-                if (!response.ok) {
-                    console.error("Errore nel recupero delle carte offerte");
-                    return;
-                }
-                const data = await response.json();
-                askPossibleCard = data.missingCards; // Assicurati che la risposta abbia un campo 'cards'
-            })
-            .catch((error) => {
-                console.error("Errore di rete:", error);
-            });
+        .then(async (response) => {
+            if (!response.ok) {
+                console.error("Errore nel recupero delle carte offerte");
+                return;
+            }
+            const data = await response.json();
+            askPossibleCard = data.missingCards; // Assicurati che la risposta abbia un campo 'cards'
+        })
+        .catch((error) => {
+            console.error("Errore di rete:", error);
+        });
     }
 
     let createTradeModal = $state(false);
@@ -169,9 +196,9 @@
         window.addEventListener("scroll", onWindowScroll);
 
         // Inizializza le carte offerte e chieste
-        getAllTrades();
+        search();
         allTradesFiltered = allTrades;
-        fetchAvailableCardsForCreateTrade();
+        fetchMissingCardsForCreateTrade();
         fetchOfferCardsForCreateTrade();
     });
 
@@ -280,7 +307,7 @@
                 selectedOfferedCards = [];
                 selectedAskCards = [];
                 fetchOfferCardsForCreateTrade();
-                fetchAvailableCardsForCreateTrade();
+                fetchMissingCardsForCreateTrade();
                 invalidateAll();
                 setTimeout(() => {
                     createTradeModal = false;
@@ -300,25 +327,6 @@
         success = false;
         errorBox = false;
         errorText = "";
-    }
-
-    async function getAllTrades() {
-        try {
-            const response = await fetch("/api/allTrades", {
-                method: "GET",
-                headers: { "Content-Type": "application/json" },
-            });
-            if (!response.ok) {
-                throw new Error("Errore nel recupero degli scambi");
-            }
-            const data = await response.json();
-            allTrades = data.trades;
-            allTradesFiltered = data.trades;
-            search();
-        } catch (error) {
-            console.error("Errore di rete:", error);
-            return [];
-        }
     }
 
     async function offeredCardsClick() {
@@ -344,15 +352,24 @@
                 if (!response.ok) {
                     console.error("Errore nell'accettare lo scambio");
                     errorTradeModal = true;
-                    getAllTrades();
+                    search();
                     errorTradeMessage = data.message;
                     return;
                 }
                 errorTradeModal = false;
                 errorTradeMessage = "";
-                console.log("Scambio accettato con successo!", data);
-                getAllTrades();
-                invalidateAll();
+                // find trade 
+                allTradesFiltered = allTradesFiltered.map((trade) => {
+                    if (trade._id === tradeId) {
+                        trade.accepted = true;
+                    }
+                    return trade;
+                });
+
+                setTimeout(async () => {
+                    await search();
+                    await invalidateAll();
+                }, 200)
             })
             .catch((error) => {
                 errorTradeModal = true;
@@ -364,36 +381,25 @@
     }
 
     let sortBy = $state("recent");
-    function search() {
-        console.log(allTradesFiltered);
-        searchQuery = searchQuery.trim();
-        if (!searchQuery) {
-            allTradesFiltered = allTrades;
-        } else {
-            allTradesFiltered = allTrades.filter((trade) => {
-                return (
-                    trade.offererInfo.username
-                        .toLowerCase()
-                        .includes(searchQuery.toLowerCase()) ||
-                    trade.offered_cardIds.some((card) =>
-                        card.name
-                            .toLowerCase()
-                            .includes(searchQuery.toLowerCase()),
-                    )
-                );
-            });
-        }
+    async function search() {
+        // fai una richiesta ad /api/search-trades
 
-        // sort
-        if (sortBy == "recent") {
-            allTradesFiltered.sort(
-                (a, b) => new Date(b.createdAt) - new Date(a.createdAt),
-            );
-        } else {
-            allTradesFiltered.sort(
-                (a, b) => new Date(a.expirateAt) - new Date(b.expirateAt),
-            );
-        }
+        searchQuery = searchQuery.trim();
+        await fetch(`/api/search-trades?searchQuery=${searchQuery}&sortBy=${sortBy}`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json" },
+        })
+            .then(async (response) => {
+                if (!response.ok) {
+                    console.error("Errore nella ricerca degli scambi");
+                    return;
+                }
+                const data = await response.json();
+                allTradesFiltered = data.trades;
+            })
+            .catch((error) => {
+                console.error("Errore di rete:", error);
+            });
     }
 </script>
 
@@ -908,7 +914,7 @@
                             class="w-full bg-gray-800/50 border mr-3 border-gray-600 rounded-lg px-4 py-3 text-white focus:border-yellow-400 focus:outline-none"
                         >
                             <option value="recent">Più recenti</option>
-                            <option value="expire">Scadenza</option>
+                            <option value="expiring">Scadenza</option>
                         </select>
                     </div>
                     <div class="sm:flex-shrink-0 mt-2 sm:mt-0">
@@ -1006,9 +1012,15 @@
                     completedTrades={trade.offererInfo.completedTrades}
                     username={trade.offererInfo.username}
                     tradeId={trade._id}
+                    completed={trade.accepted}
                     acceptTradeClick={() => acceptTradeClick(trade._id)}
                 />
             {/each}
+            {#if allTradesFiltered.length == 0} 
+                <div class="p-6 text-white text-center w-full col-span-full">
+                    Nessuno scambio trovato
+                </div>
+            {/if}
         </div>
         <!-- Sentinel per lo scroll della pagina principale -->
         <div bind:this={sentinel} class="h-1"></div>

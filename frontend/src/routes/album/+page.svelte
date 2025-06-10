@@ -418,6 +418,11 @@
         {#each game_cards_filtered.slice(0, renderLimit) as card}
             <CharacterCard quantity={card.quantity} content={card} />
         {/each}
+        {#if game_cards_filtered.length == 0} 
+            <div class="p-6 text-white text-center w-full col-span-full">
+                Nessuna carta trovata
+            </div>
+        {/if}
 
         <!-- Sentinel element to detect scroll position -->
         <div bind:this={sentinel} class="col-span-full h-1"></div>
