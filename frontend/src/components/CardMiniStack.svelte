@@ -4,7 +4,7 @@
   export let cards = [];
   export let flipDisabled = false;
 
-  // Calcoliamo un punto centrale per la rotazione, così il mazzo appare bilanciato
+  // punto centrale per la rotazione, così il mazzo appare bilanciato
   const centerIndex = (cards.length - 1) / 2;
 </script>
 

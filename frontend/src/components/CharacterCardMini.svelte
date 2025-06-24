@@ -49,15 +49,6 @@
     return houses[houseName] || houses["Gryffindor"];
   }
 
-  // Funzione per formattare la data
-  function formatDate(dateString) {
-    if (!dateString) return "";
-    const [day, month, year] = dateString.split("-");
-    const months = ["Gen", "Feb", "Mar", "Apr", "Mag", "Giu", 
-                   "Lug", "Ago", "Set", "Ott", "Nov", "Dic"];
-    return `${day} ${months[parseInt(month) - 1]} ${year}`;
-  }
-
   // Funzione per ottenere il primo nome alternativo
   function getPrimaryAlternateName(names) {
     return names && names.length > 0 ? names[0] : "";

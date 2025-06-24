@@ -437,7 +437,7 @@ export const getUserInfoController = () => {
                 favouriteWizard: user.favouriteWizard,
                 game_cards: user.game_cards || [], // Assicura che game_cards sia un array
                 trades: user.trades || [], // Assicura che trades sia un array
-                paymentInfo: user.paymentInfo || {}, // Assicura che paymentInfo sia un oggetto
+                //paymentInfo: user.paymentInfo || {}, // Assicura che paymentInfo sia un oggetto
                 balance: user.balance || 0, // Assicura che balance sia un numero
                 createdAt: user.createdAt,
             };
@@ -805,11 +805,10 @@ export const getUserMissingCardsController = () => {
                 return res.status(500).send({ message: "Errore Server" });
             });
 
-            // Se ci sono scambi attivi, aggiungi l'informazione se la carta è già richiesta
+            // Se ci sono scambi attivi
             if (trades && trades.length > 0) {
-                // Trasforma l'array delle carte mancanti e aggiungi la proprietà alreadyRequested
                 missingCards = missingCards.map(card => {
-                    const cardObj = card.toObject(); // Converti il documento Mongoose in oggetto semplice
+                    const cardObj = card.toObject(); // Converte il documento Mongoose in oggetto semplice
                     cardObj.alreadyRequested = trades.some(trade => 
                         trade.requested_cardIds.some(requestedCard => requestedCard.id === cardObj.id)
                     );
@@ -819,7 +818,7 @@ export const getUserMissingCardsController = () => {
                     return cardObj;
                 });
             } else {
-                // Converti in oggetti semplici anche se non ci sono scambi
+                // Converte in oggetti semplici anche se non ci sono scambi
                 missingCards = missingCards.map(card => card.toObject());
             }
 
@@ -1006,10 +1005,7 @@ export const updateUserInfoController = () => {
             // Aggiornamento delle informazioni dell'utente
             user.username = username;
             user.favouriteWizard = favouriteWizard;
-            await user.save().catch((error) => {
-                console.error("[-] Errore durante il salvataggio delle informazioni utente:", error);
-                return res.status(500).send({ message: "Errore Server" });
-            });
+            await user.save()
 
             // Log dell'aggiornamento riuscito
             console.log("[+] Informazioni utente aggiornate con successo:", { username, favouriteWizard });
@@ -1324,10 +1320,10 @@ export const openPackageCardsUserController = () => {
             });
 
             // Salvataggio delle modifiche nel database
-            await userModel.updateOne({ _id: userId }, { $set: { game_cards: user.game_cards, balance: user.balance } }).catch((error) => {
-                console.error("[-] Errore durante il salvataggio delle informazioni utente:", error);
-                return res.status(500).send({ message: "Errore Server" });
-            });
+            await userModel.updateOne(
+                { _id: userId }, 
+                { $set: { game_cards: user.game_cards, balance: user.balance } }
+            )
 
             console.log("[+] Pacchetto carte aperto con successo");
             res.status(200).send({ message: "Pacchetto carte aperto con successo", newCards, remainingCredits: user.balance });
@@ -1393,7 +1389,7 @@ export const buyCreditUserController = () => {
 
             // Validazione della quantità di crediti
             if (!amount || typeof amount !== 'number' || amount <= 0) {
-                console.log("[-] Apertura pacchetto fallita: Quantità non valida");
+                console.log("[-] Acquisto crediti fallito: Quantità non valida");
                 return res.status(400).send({ message: "Quantità non valida" });
             }
 
@@ -1413,10 +1409,7 @@ export const buyCreditUserController = () => {
             user.balance += amount;
 
             // Salvataggio delle modifiche nel database
-            await userModel.updateOne({ _id: userId }, { $set: { balance: user.balance } }).catch((error) => {
-                console.error("[-] Errore durante il salvataggio delle informazioni utente:", error);
-                return res.status(500).send({ message: "Errore Server" });
-            });
+            await userModel.updateOne({ _id: userId }, { $set: { balance: user.balance } })
 
             console.log("[+] Acquisto completato con successo");
             res.status(200).send({ message: "Acquisto completato con successo", newBalance: user.balance });

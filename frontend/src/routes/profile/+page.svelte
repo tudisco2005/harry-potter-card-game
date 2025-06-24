@@ -63,7 +63,6 @@
         
         // Controllo finale prima dell'invio
         if(username.trim() === "" || favouriteWizard.trim() === "") {
-            checkChanges(); // Aggiorna gli errori
             return;
         }
 
